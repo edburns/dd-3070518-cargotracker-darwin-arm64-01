@@ -5,12 +5,14 @@ import org.eclipse.cargotracker.interfaces.booking.facade.dto.CargoRoute;
 import org.eclipse.cargotracker.interfaces.booking.facade.dto.Location;
 import org.eclipse.cargotracker.interfaces.booking.facade.dto.RouteCandidate;
 import org.junit.Test;
+import org.primefaces.PrimeFaces;
 
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.text.SimpleDateFormat;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -74,6 +76,24 @@ public class ChangeArrivalDeadlineDateTest {
     }
 
     @Test
+    public void changeArrivalDeadlineClosesAfterFacadeSucceeds() throws Exception {
+        RecordingBookingServiceFacade facade = new RecordingBookingServiceFacade(null);
+        ChangeArrivalDeadlineDate editor = editorWithFacade(facade);
+        editor.setTrackingId("ABC123");
+        editor.setArrivalDeadlineDate(new Date());
+
+        PrimeFaces previousPrimeFaces = PrimeFaces.current();
+        PrimeFaces.setCurrent(new RecordingPrimeFaces(facade.events));
+        try {
+            editor.changeArrivalDeadline();
+        } finally {
+            PrimeFaces.setCurrent(previousPrimeFaces);
+        }
+
+        assertEquals(Arrays.asList("facade", "close:DONE"), facade.events);
+    }
+
+    @Test
     public void changeArrivalDeadlineRejectsNull() throws Exception {
         RecordingBookingServiceFacade facade = new RecordingBookingServiceFacade(null);
         ChangeArrivalDeadlineDate editor = editorWithFacade(facade);
@@ -117,6 +137,7 @@ public class ChangeArrivalDeadlineDateTest {
         private String changedTrackingId;
         private Date changedArrivalDeadline;
         private RuntimeException changeDeadlineFailure;
+        private final List<String> events = new ArrayList<>();
 
         private RecordingBookingServiceFacade(CargoRoute cargo) {
             this.cargo = cargo;
@@ -146,6 +167,7 @@ public class ChangeArrivalDeadlineDateTest {
             changeDeadlineCalls++;
             changedTrackingId = trackingId;
             changedArrivalDeadline = arrivalDeadline;
+            events.add("facade");
             if (changeDeadlineFailure != null) {
                 throw changeDeadlineFailure;
             }
@@ -164,6 +186,25 @@ public class ChangeArrivalDeadlineDateTest {
         @Override
         public List<CargoRoute> listAllCargos() {
             return new ArrayList<>();
+        }
+    }
+
+    private static class RecordingPrimeFaces extends PrimeFaces {
+
+        private final List<String> events;
+
+        private RecordingPrimeFaces(List<String> events) {
+            this.events = events;
+        }
+
+        @Override
+        public Dialog dialog() {
+            return new Dialog() {
+                @Override
+                public void closeDynamic(Object outcome) {
+                    events.add("close:" + outcome);
+                }
+            };
         }
     }
 }
