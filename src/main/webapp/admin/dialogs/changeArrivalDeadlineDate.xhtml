@@ -30,9 +30,12 @@
                 <p:outputLabel/>
                 <p:message for="arrivalDeadlineDate"/>
 
-                <p:commandButton value="Cancel" action="#{changeArrivalDeadlineDateDialog.cancel()}"/>
+                <p:commandButton value="Cancel"
+                                 action="#{changeArrivalDeadlineDateDialog.cancel()}"
+                                 process="@this"/>
                 <p:commandButton value="Update"
-                                 action="#{changeArrivalDeadlineDate.changeArrivalDeadline()}"/>
+                                 action="#{changeArrivalDeadlineDate.changeArrivalDeadline()}"
+                                 update="@form"/>
             </h:panelGrid>
         </h:form>
     </div>
