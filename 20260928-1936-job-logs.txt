@@ -1,0 +1,81 @@
+=== shepherd-task Cargo Tracker run ===
+Repository:          edburns/dd-3070518-cargotracker-darwin-arm64-01
+Workareas directory: /Users/edburns/workareas
+Fixture root:        /Users/edburns/.copilot/plugins/shepherd-task/test/cargotracker-add-change-arrival-deadline-feature
+Primary checkout:    /Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-target
+Control worktree:    /Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control
+Source branch:       20260902-2104Z-commit-e7b651f-liberty
+Baseline branch:     experiment/shepherd-shared-baseline
+Control branch:      experiment/shepherd-control
+
+[shepherd] Canonical lifecycle: Stage 00 -> Stage 10 -> research gate -> Stage 15 -> Stage 20 -> Stage 25 -> Stage 30 -> Stage 40 -> Stage 50.
+[shepherd] Stage 10 and the human/Copilot research gate are not run live.
+[shepherd] This deterministic control fixture writes an already-resolved plan in their place.
+[shepherd] Repository setup, offline contracts, and final verification are experiment operations, not shepherd-task stages.
+[shepherd] Experiment setup: validating prerequisites.
+[shepherd] Experiment setup: running offline contracts.
+[shepherd] Experiment setup: checking the disposable repository.
+[shepherd] Experiment setup: cloning the primary checkout.
+[shepherd] Experiment setup: publishing the immutable baseline.
+[shepherd] Experiment setup: creating the control worktree.
+
+[shepherd] Stage 00 - Initialize campaign
+[shepherd] Planned invocation of shepherd-task-00-init-campaign.sh:
+  /Users/edburns/.copilot/plugins/shepherd-task/scripts/shepherd-task-00-init-campaign.sh \<CAMPAIGN_ISSUE_NUMBER\> arrival-deadline-control experiment/shepherd-control edburns/dd-3070518-cargotracker-darwin-arm64-01 
+[shepherd] Creating campaign issue 1 in https://github.com/edburns/dd-3070518-cargotracker-darwin-arm64-01
+
+[shepherd] Stage 00 - Initialize campaign
+[shepherd] Actual invocation of shepherd-task-00-init-campaign.sh:
+  /Users/edburns/.copilot/plugins/shepherd-task/scripts/shepherd-task-00-init-campaign.sh 1 arrival-deadline-control experiment/shepherd-control edburns/dd-3070518-cargotracker-darwin-arm64-01 
+
+[shepherd] Stage 10 - Create ignorance-reduction plan
+[shepherd] Normal usage invokes skill shepherd-task-10-create-ignorance-reduction-plan.
+[shepherd] Human and Copilot research then fills every implementation-gating Resolution block.
+[shepherd] This control fixture substituted an already-resolved plan for Stage 10 and the research gate.
+
+[shepherd] Stage 15 - Prepare Stage 20
+[shepherd] Planned invocation of shepherd-task-15-prepare-create-issues.sh:
+  /Users/edburns/.copilot/plugins/shepherd-task/scripts/shepherd-task-15-prepare-create-issues.sh 1-arrival-deadline-control-remove-before-merge 
+
+[shepherd] Stage 20 - Create issues from the resolved plan
+[shepherd] Stage 15 will generate a launcher that invokes skill shepherd-task-20-create-issues-from-plan.
+
+[shepherd] Stage 25 - Dispatch ordered issue list after Stage 20
+[shepherd] Planned invocation of shepherd-task-25-given-list.sh:
+  /Users/edburns/.copilot/plugins/shepherd-task/scripts/shepherd-task-25-given-list.sh \<TASK_ISSUE_LIST\> 1-arrival-deadline-control-remove-before-merge 
+
+[shepherd] Stage 15 - Prepare Stage 20
+[shepherd] Actual invocation of shepherd-task-15-prepare-create-issues.sh:
+  /Users/edburns/.copilot/plugins/shepherd-task/scripts/shepherd-task-15-prepare-create-issues.sh 1-arrival-deadline-control-remove-before-merge 
+[shepherd] Stage 20 completed through the generated launcher, and the fixture verified all five issue bodies.
+
+[shepherd] Stage 25 - Dispatch ordered issue list
+[shepherd] Actual invocation of shepherd-task-25-given-list.sh:
+  /Users/edburns/.copilot/plugins/shepherd-task/scripts/shepherd-task-25-given-list.sh 2\,3\,4\,5\,6 1-arrival-deadline-control-remove-before-merge 
+[shepherd] Stage 25 will process issues 2,3,4,5,6 serially.
+[shepherd] For each issue, Stage 30 moves assignment to the Ready-for-review boundary, then Stage 40 reviews and merges it.
+[shepherd] Stage 50 creates the campaign post-mortem after success or failure.
+[shepherd] Run evidence will be written beneath: /Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/1-arrival-deadline-control-remove-before-merge/shepherd-tasks-<CAMPAIGN_ID>-<TIMESTAMP>
+[shepherd] Detailed per-issue output is hidden; use --show-shepherd-task-script-output to display it.
+[shepherd] Stage 25 completed successfully for all five issues.
+[shepherd] Experiment verification: synchronizing and checking the completed campaign.
+[shepherd] Experiment verification: collecting final evidence.
+
+=== CAMPAIGN LESSONS ===
+# Campaign lessons
+
+This file contains validated, reusable lessons for subsequent issues in this campaign.
+The issue specification and repository instructions remain authoritative.
+
+## Validated lessons
+
+No validated lessons have been recorded yet.
+
+=== RUN COMPLETE ===
+Repository:               https://github.com/edburns/dd-3070518-cargotracker-darwin-arm64-01
+Baseline SHA:             9b9f311b2a3a2854bdac947593950d9edb6bca7d
+Issues:                   2,3,4,5,6
+Run directory:            /Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/1-arrival-deadline-control-remove-before-merge/shepherd-tasks-cb68d348-f71e-4ce0-a529-ca5a5d5cbc20-20260928-1940
+Post-mortem:              /Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/1-arrival-deadline-control-remove-before-merge/shepherd-tasks-cb68d348-f71e-4ce0-a529-ca5a5d5cbc20-20260928-1940/20260928-2214-post-mortem.md
+Machine-readable summary: /Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control-20260929-0223.json
+All evidence and worktrees were preserved. No cleanup was performed.

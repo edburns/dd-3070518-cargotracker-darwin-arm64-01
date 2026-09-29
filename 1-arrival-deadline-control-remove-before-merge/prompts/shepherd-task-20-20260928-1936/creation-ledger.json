@@ -1,0 +1,52 @@
+[
+  {
+    "implementationSubsection": "4.1",
+    "bodyFile": "issue-bodies/01-4.1-body.md",
+    "id": 5622753605,
+    "number": 2,
+    "title": "4.1 — Add the application-layer deadline change operation",
+    "url": "https://github.com/edburns/dd-3070518-cargotracker-darwin-arm64-01/issues/2",
+    "body_verified": true,
+    "linked": true
+  },
+  {
+    "implementationSubsection": "4.2",
+    "bodyFile": "issue-bodies/02-4.2-body.md",
+    "id": 5622753866,
+    "number": 3,
+    "title": "4.2 — Expose deadline changes through the booking facade",
+    "url": "https://github.com/edburns/dd-3070518-cargotracker-darwin-arm64-01/issues/3",
+    "body_verified": true,
+    "linked": true
+  },
+  {
+    "implementationSubsection": "4.3",
+    "bodyFile": "issue-bodies/03-4.3-body.md",
+    "id": 5622754190,
+    "number": 4,
+    "title": "4.3 — Implement the deadline editor backing model",
+    "url": "https://github.com/edburns/dd-3070518-cargotracker-darwin-arm64-01/issues/4",
+    "body_verified": true,
+    "linked": true
+  },
+  {
+    "implementationSubsection": "4.4",
+    "bodyFile": "issue-bodies/04-4.4-body.md",
+    "id": 5622754445,
+    "number": 5,
+    "title": "4.4 — Implement the PrimeFaces deadline dialog",
+    "url": "https://github.com/edburns/dd-3070518-cargotracker-darwin-arm64-01/issues/5",
+    "body_verified": true,
+    "linked": true
+  },
+  {
+    "implementationSubsection": "4.5",
+    "bodyFile": "issue-bodies/05-4.5-body.md",
+    "id": 5622754668,
+    "number": 6,
+    "title": "4.5 — Integrate deadline editing into the Administration dashboard",
+    "url": "https://github.com/edburns/dd-3070518-cargotracker-darwin-arm64-01/issues/6",
+    "body_verified": true,
+    "linked": true
+  }
+]

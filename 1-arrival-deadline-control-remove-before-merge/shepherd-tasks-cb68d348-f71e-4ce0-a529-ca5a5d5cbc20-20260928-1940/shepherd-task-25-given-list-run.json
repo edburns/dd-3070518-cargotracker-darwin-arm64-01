@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "shepherdTaskVersion": "1.0.4",
+  "campaignCreatedWithVersion": "1.0.4",
+  "stageOutcomeProtocolVersion": 1,
+  "campaignId": "cb68d348-f71e-4ce0-a529-ca5a5d5cbc20",
+  "campaignMetadataDirectory": "1-arrival-deadline-control-remove-before-merge",
+  "repository": "edburns/dd-3070518-cargotracker-darwin-arm64-01",
+  "baseBranch": "experiment/shepherd-control",
+  "lessonPropagation": "off",
+  "taskIssues": [
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "startedAt": "2026-09-28T23:40:08Z",
+  "completedAt": "2026-09-29T02:14:08Z",
+  "exitCode": 0,
+  "status": "succeeded"
+}
