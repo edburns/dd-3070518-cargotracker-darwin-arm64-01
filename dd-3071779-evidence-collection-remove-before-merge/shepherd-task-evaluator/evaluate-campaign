@@ -3,4 +3,4 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-exec jbang "$SCRIPT_DIR/CampaignEvaluator.java" "$@"
+exec jbang "$SCRIPT_DIR/CampaignEvaluator.java" --evaluator-dir "$SCRIPT_DIR" "$@"

@@ -17,7 +17,7 @@ structured trace, convergence, cost, environment, and repository findings.
 
 ```sh
 ./evaluate-campaign <campaign-dir> --arm <control|treatment> \
-  [--repo <path>] [--out <dir>] [--with-build]
+  [--repo <path>] [--out <dir>] [--with-build] [--allow-unversioned]
 ```
 
 The default output directory is `<campaign-dir>-eval`.
@@ -25,6 +25,7 @@ The default output directory is `<campaign-dir>-eval`.
 ```text
 findings.json
 summary.csv
+defects.csv
 report.md
 unclassified.md
 ```
@@ -32,6 +33,10 @@ unclassified.md
 The launcher is POSIX shell and does not require Bash-specific arrays or
 features. The campaign directory is read-only. Repository analysis creates
 detached temporary Git worktrees and removes them after each operation.
+Evaluator provenance is resolved from this launcher's source directory. Normal
+runs require a semantic version and a 40-character Git commit, and outputs
+record whether the evaluator worktree is dirty. `--allow-unversioned` is only
+for explicit development runs and emits a report warning.
 
 ## Analysis behavior
 
@@ -54,6 +59,10 @@ detached temporary Git worktrees and removes them after each operation.
   such as `shepherd_harness`, `local_environment`,
   `agent_tool_invocation`, `agent_authored_test_harness`, or `product_code`.
   Uncertain events are written to `unclassified.md`.
+- Every event has an underlying-problem ID and normalized recurrence signature.
+  Companion events emitted by one failed command share a problem ID.
+- `defects.csv` is the concatenable headline dataset, with one row per
+  deduplicated product defect and its first detection, fix, and timing.
 - Unit-test and Arquillian/container-test detection stages remain distinct.
 - A failed test that passes on an unchanged-head rerun is infrastructure
   flakiness. Detectable persisted-state contamination is separately labeled

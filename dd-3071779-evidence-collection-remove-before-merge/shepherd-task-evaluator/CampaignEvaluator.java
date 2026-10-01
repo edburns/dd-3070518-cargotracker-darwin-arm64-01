@@ -84,6 +84,10 @@ public class CampaignEvaluator {
     private static final Pattern COMMIT_OUTPUT = Pattern.compile(
             "(?m)^\\[(?:detached HEAD|[^\\]]+)\\s+([0-9a-f]{7,40})\\]\\s+(.+)$");
     private static final Pattern SHA = Pattern.compile("\\b[0-9a-f]{40}\\b");
+    private static final Pattern HEAD_REF_OID = Pattern.compile(
+            "\"headRefOid\"\\s*:\\s*\"([0-9a-f]{40})\"");
+    private static final Pattern HEAD_ASSIGNMENT = Pattern.compile(
+            "\\b(?:CURRENT_SHA|EXPECTED_HEAD|VALIDATED_HEAD|REVIEW_TARGET_HEAD|HEAD)=['\"]([0-9a-f]{40})");
     private static final Pattern TEST_SUMMARY = Pattern.compile(
             "Tests run:\\s*(\\d+),\\s*Failures:\\s*(\\d+),\\s*Errors:\\s*(\\d+),\\s*Skipped:\\s*(\\d+)");
     private static final Pattern ASSERTION = Pattern.compile(
@@ -103,17 +107,23 @@ public class CampaignEvaluator {
     private final Path evaluatorDir;
     private final String evaluatorVersion;
     private final String evaluatorCommit;
+    private final boolean evaluatorDirty;
     private final List<ObjectNode> events = new ArrayList<>();
     private final List<ObjectNode> unclassified = new ArrayList<>();
     private int eventSequence;
 
     private CampaignEvaluator(Config config) throws Exception {
         this.config = config;
-        this.evaluatorDir = Paths.get(CampaignEvaluator.class
-                .getProtectionDomain().getCodeSource().getLocation().toURI()).toAbsolutePath();
-        Path sourceCandidate = findEvaluatorDirectory();
-        this.evaluatorVersion = readVersion(sourceCandidate);
-        this.evaluatorCommit = gitCommit(sourceCandidate);
+        this.evaluatorDir = config.evaluatorDir;
+        this.evaluatorVersion = readVersion(evaluatorDir);
+        this.evaluatorCommit = gitCommit(evaluatorDir);
+        this.evaluatorDirty = gitDirty(evaluatorDir);
+        if (!config.allowUnversioned
+                && (!evaluatorVersion.matches("\\d+\\.\\d+\\.\\d+")
+                || !evaluatorCommit.matches("[0-9a-f]{40}"))) {
+            throw new UsageException("Cannot resolve evaluator version and 40-character Git commit from "
+                    + evaluatorDir + "; use --allow-unversioned only for an explicitly unversioned run.");
+        }
     }
 
     public static void main(String[] args) {
@@ -124,7 +134,7 @@ public class CampaignEvaluator {
             System.err.println(error.getMessage());
             System.err.println();
             System.err.println("Usage: ./evaluate-campaign <campaign-dir> --arm <control|treatment>"
-                    + " [--repo <path>] [--out <dir>] [--with-build]");
+                    + " [--repo <path>] [--out <dir>] [--with-build] [--allow-unversioned]");
             System.exit(2);
         } catch (Exception error) {
             System.err.println("Evaluation failed: " + error.getMessage());
@@ -158,16 +168,18 @@ public class CampaignEvaluator {
         List<ObjectNode> defects = deduplicateProductDefects();
 
         ObjectNode root = JSON.createObjectNode();
-        root.put("schemaVersion", "1.0");
+        root.put("schemaVersion", "1.2");
         root.set("evaluator", evaluatorMetadata());
         root.set("campaign", campaignMetadata(manifest, sessions));
         root.set("evidenceQuality", evidenceQuality(sessions));
         root.set("sessions", sessionsJson(sessions));
         root.set("tasks", tasksJson(tasks, sessions));
         root.set("failureEvents", array(events));
+        root.set("underlyingProblems", aggregateUnderlyingProblems());
+        root.set("recurrenceSignatures", aggregateRecurrences());
         root.set("productDefects", array(defects));
         root.set("transitions", aggregateTransitions(sessions));
-        root.set("hallucinationSignals", aggregateHallucinations(sessions));
+        root.set("hallucinationSignals", aggregateHallucinations());
         root.set("convergence", aggregateConvergence(sessions));
         root.set("cost", traceCost);
         root.set("environment", aggregateEnvironment(sessions));
@@ -182,41 +194,33 @@ public class CampaignEvaluator {
 
         writeJson(config.outputDir.resolve("findings.json"), root);
         writeSummaryCsv(manifest, root, tasks, sessions);
+        writeDefectsCsv(manifest, defects);
         writeReport(manifest, root, tasks, sessions);
         writeUnclassified();
 
         System.out.println("Wrote evaluation to " + config.outputDir);
     }
 
-    private Path findEvaluatorDirectory() {
-        String source = System.getProperty("jbang.source");
-        if (source != null && !source.isBlank()) {
-            Path path = Paths.get(source).toAbsolutePath().normalize();
-            if (Files.isRegularFile(path)) {
-                return path.getParent();
-            }
-        }
-        Path cwdCandidate = Paths.get("").toAbsolutePath()
-                .resolve("dd-3071779-evidence-collection-remove-before-merge")
-                .resolve("shepherd-task-evaluator");
-        if (Files.exists(cwdCandidate.resolve("VERSION"))) {
-            return cwdCandidate;
-        }
-        return evaluatorDir;
-    }
-
-    private static String readVersion(Path directory) {
+    private String readVersion(Path directory) {
         try {
             return Files.readString(directory.resolve("VERSION"), StandardCharsets.UTF_8).trim();
         } catch (IOException ignored) {
-            return "unavailable";
+            return config.allowUnversioned ? "unversioned" : "";
         }
     }
 
-    private static String gitCommit(Path directory) {
+    private String gitCommit(Path directory) {
         CommandResult result = command(List.of(
                 "git", "-C", directory.toString(), "rev-parse", "HEAD"), null, Map.of());
-        return result.exitCode == 0 ? result.output.trim() : "unavailable";
+        return result.exitCode == 0 ? result.output.trim()
+                : config.allowUnversioned ? "unversioned" : "";
+    }
+
+    private static boolean gitDirty(Path directory) {
+        CommandResult result = command(List.of(
+                "git", "-C", directory.toString(), "status", "--porcelain",
+                "--untracked-files=no"), null, Map.of());
+        return result.exitCode == 0 && !result.output.isBlank();
     }
 
     private void requireReadableCampaign() throws IOException {
@@ -283,6 +287,7 @@ public class CampaignEvaluator {
         List<String> lines = Files.readAllLines(markdown, StandardCharsets.UTF_8);
         parseTranscriptHeader(result, lines);
         parseSessionJsonl(result);
+        calibrateTranscriptStart(result);
         parseOtel(result);
         result.prNumber = parsePrNumber(transcript);
         parseTranscript(result, lines);
@@ -300,7 +305,7 @@ public class CampaignEvaluator {
             String line = lines.get(index);
             Matcher started = STARTED.matcher(line);
             if (started.find()) {
-                result.startedAt = parseTranscriptDate(started.group(1).trim());
+                result.headerLocalStart = parseTranscriptLocalDate(started.group(1).trim());
             }
             Matcher sessionId = SESSION_ID.matcher(line);
             if (sessionId.find()) {
@@ -313,19 +318,44 @@ public class CampaignEvaluator {
         }
     }
 
-    private static Instant parseTranscriptDate(String value) {
+    private static LocalDateTime parseTranscriptLocalDate(String value) {
         List<DateTimeFormatter> formats = List.of(
                 DateTimeFormatter.ofPattern("M/d/yyyy, h:mm:ss a", Locale.US),
                 DateTimeFormatter.ofPattern("M/d/yyyy, h:mm a", Locale.US));
         for (DateTimeFormatter format : formats) {
             try {
                 LocalDateTime local = LocalDateTime.parse(value, format);
-                return local.atZone(ZoneId.systemDefault()).toInstant();
+                return local;
             } catch (DateTimeParseException ignored) {
                 // Try the next known transcript format.
             }
         }
         return null;
+    }
+
+    private static void calibrateTranscriptStart(SessionResult result) {
+        if (result.headerLocalStart == null) return;
+        if (result.firstJsonlTimestamp == null) {
+            result.startedAt = result.headerLocalStart
+                    .atZone(ZoneId.systemDefault()).toInstant();
+            result.timestampConversionMethod = "host_zone_fallback";
+            return;
+        }
+        Instant best = null;
+        long bestDifference = Long.MAX_VALUE;
+        for (int offsetHours = -14; offsetHours <= 14; offsetHours++) {
+            Instant candidate = result.headerLocalStart
+                    .toInstant(java.time.ZoneOffset.ofHours(offsetHours));
+            long difference = Math.abs(Duration.between(
+                    candidate, result.firstJsonlTimestamp).getSeconds());
+            if (difference < bestDifference) {
+                best = candidate;
+                bestDifference = difference;
+            }
+        }
+        result.startedAt = best;
+        result.timestampConversionMethod =
+                "local_header_zone_offset_calibrated_to_first_jsonl_timestamp";
     }
 
     private static long durationSeconds(Matcher matcher) {
@@ -356,6 +386,14 @@ public class CampaignEvaluator {
                 } catch (JsonProcessingException error) {
                     result.jsonlParseErrors++;
                     continue;
+                }
+                if (result.firstJsonlTimestamp == null && event.has("timestamp")) {
+                    try {
+                        result.firstJsonlTimestamp =
+                                Instant.parse(event.path("timestamp").asText());
+                    } catch (DateTimeParseException ignored) {
+                        // Later events may carry a parseable timestamp.
+                    }
                 }
                 String type = event.path("type").asText();
                 result.eventTypeCounts.merge(type, 1, Integer::sum);
@@ -569,9 +607,14 @@ public class CampaignEvaluator {
             while (level.find()) {
                 session.javacLevels.add(level.group(1));
             }
-            Matcher sha = SHA.matcher(block.output);
-            while (sha.find()) {
-                currentHead = sha.group();
+            Matcher assigned = HEAD_ASSIGNMENT.matcher(
+                    Objects.toString(block.command, ""));
+            while (assigned.find()) {
+                currentHead = assigned.group(1);
+            }
+            Matcher headRef = HEAD_REF_OID.matcher(block.output);
+            while (headRef.find()) {
+                currentHead = headRef.group(1);
             }
             block.headSha = currentHead;
             session.toolBlocks.add(block);
@@ -838,6 +881,12 @@ public class CampaignEvaluator {
                     "INVALID_REMOTE_RESOURCE_LOOKUP",
                     "The command requested a repository resource or encoded payload that did not exist.");
         }
+        if (lower.contains("expected \"actual\" to be strictly unequal")
+                && lower.contains("12/15/2026")) {
+            return classification("agent_operational_error", "leftover_state",
+                    "ACCEPTANCE_LEFTOVER_STATE",
+                    "The acceptance script encountered a value persisted by its previous attempt.");
+        }
         if (lower.contains("intercepts pointer events")
                 || lower.contains("input did not match the regular expression")
                 || lower.contains("expected \"actual\" to be strictly unequal")
@@ -932,7 +981,14 @@ public class CampaignEvaluator {
         } else {
             event.put("headSha", block.headSha);
         }
-        event.put("detectionGate", gate);
+        boolean productDefect = "product_defect".equals(
+                classification.path("category").asText());
+        if (productDefect) {
+            event.put("detectionGate", gate);
+        } else {
+            event.putNull("detectionGate");
+        }
+        event.put("activity", activity(block));
         event.put("commandOrCheck", excerpt(block.command == null ? block.tool : block.command, 600));
         if (exitCode == null) {
             event.putNull("exitCode");
@@ -947,7 +1003,9 @@ public class CampaignEvaluator {
         evidence.put("partialOutputCorroborated",
                 partialOutputCorroborates(session, block.output));
         event.set("classification", classification);
-        event.putNull("underlyingProblemId");
+        event.put("underlyingProblemId", "problem-" + session.issue + "-"
+                + session.shepherdStage + "-" + block.startLine);
+        event.put("recurrenceSignature", recurrenceSignature(block, classification));
         ObjectNode resolution = event.putObject("resolution");
         resolution.put("status", "unknown");
         resolution.putNull("timestamp");
@@ -956,6 +1014,39 @@ public class CampaignEvaluator {
         events.add(event);
         session.eventIds.add(event.path("id").asText());
         return event;
+    }
+
+    private static String activity(ToolBlock block) {
+        String command = Objects.toString(block.command, "").toLowerCase(Locale.ROOT);
+        if (command.contains("gh api")) return "github_api_query";
+        if (command.contains("gh pr view")) return "github_pr_query";
+        if (command.contains("mvn") && command.contains("liberty:")) return "maven_liberty_goal";
+        if (command.contains("mvn") && command.contains("package")) return "maven_package";
+        if (command.contains("playwright") || command.contains("acceptance.mjs")) {
+            return "browser_acceptance_script";
+        }
+        if (command.contains("atomic") || command.contains("merge")) return "merge_gate_script";
+        return block.tool.replace('-', '_');
+    }
+
+    private static String recurrenceSignature(
+            ToolBlock block, ObjectNode classification) {
+        String text = (Objects.toString(block.command, "") + "\n" + block.output)
+                .toLowerCase(Locale.ROOT);
+        if (text.contains("--slurp") && text.contains("--jq")) {
+            return "gh_api_slurp_with_jq";
+        }
+        if (text.contains("gh pr view") && text.contains("--comments")
+                && text.contains("--json")) {
+            return "gh_pr_view_comments_with_json";
+        }
+        if (text.matches("(?s).*accepts\\s+\\d+\\s+arg\\(s\\),\\s+received\\s+\\d+.*")) {
+            return "gh_api_wrong_argument_count";
+        }
+        if (text.contains("no plugin found for prefix")) {
+            return "maven_unavailable_plugin_prefix";
+        }
+        return classification.path("ruleId").asText("unclassified").toLowerCase(Locale.ROOT);
     }
 
     private static String classificationOrigin(String category, String subtype) {
@@ -968,7 +1059,8 @@ public class CampaignEvaluator {
         if ("missing_tool_dependency".equals(subtype)) {
             return "local_environment";
         }
-        if ("test_harness_error".equals(subtype)) {
+        if ("test_harness_error".equals(subtype)
+                || "leftover_state".equals(subtype)) {
             return "agent_authored_test_harness";
         }
         if ("incompatible_default_jdk".equals(subtype)
@@ -1020,18 +1112,19 @@ public class CampaignEvaluator {
     private void parseTransitions(SessionResult session, ToolBlock block) {
         List<JsonNode> roots = parseJsonValues(block.output);
         for (JsonNode root : roots) {
-            collectTransitions(session, block, root, null);
+            collectTransitions(session, block, root, null, false);
         }
     }
 
     private void collectTransitions(
-            SessionResult session, ToolBlock block, JsonNode node, String inheritedHead) {
+            SessionResult session, ToolBlock block, JsonNode node,
+            String inheritedHead, boolean insideSteps) {
         if (node == null) {
             return;
         }
         if (node.isArray()) {
             for (JsonNode child : node) {
-                collectTransitions(session, block, child, inheritedHead);
+                collectTransitions(session, block, child, inheritedHead, insideSteps);
             }
             return;
         }
@@ -1044,7 +1137,7 @@ public class CampaignEvaluator {
         }
         String check = firstText(node, "name", "context", "workflowName");
         String conclusion = firstText(node, "conclusion", "state", "status");
-        if (check != null && conclusion != null
+        if (!insideSteps && check != null && conclusion != null
                 && Set.of("SUCCESS", "FAILURE", "ERROR", "CANCELLED", "TIMED_OUT",
                 "success", "failure", "error", "cancelled", "timed_out")
                 .contains(conclusion)) {
@@ -1068,7 +1161,8 @@ public class CampaignEvaluator {
         }
         String childHead = head;
         node.fields().forEachRemaining(entry ->
-                collectTransitions(session, block, entry.getValue(), childHead));
+                collectTransitions(session, block, entry.getValue(), childHead,
+                        insideSteps || "steps".equals(entry.getKey())));
     }
 
     private static String firstText(JsonNode node, String... fields) {
@@ -1135,6 +1229,7 @@ public class CampaignEvaluator {
                 ObjectNode event = addEvent(session, block, "review_finding",
                         "ccra_review", null, classification);
                 event.put("reviewCommentId", commentId);
+                event.put("underlyingProblemId", "problem-review-" + commentId);
                 event.put("commandOrCheck", comment.path("path").asText("Copilot review"));
                 event.path("evidence").deepCopy();
                 ((ObjectNode) event.path("evidence")).put(
@@ -1144,7 +1239,34 @@ public class CampaignEvaluator {
     }
 
     private void parseStage30ChangeRequests(SessionResult session, ToolBlock block) {
-        if (session.shepherdStage != 30 || !block.output.contains("\"CHANGES_REQUESTED\"")) {
+        if (session.shepherdStage != 30) {
+            return;
+        }
+        if (block.command != null && block.command.contains("gh pr review")
+                && block.command.contains("--request-changes")
+                && block.command.contains("REVIEW_BODY=")) {
+            Matcher head = Pattern.compile("CURRENT_SHA=['\"]([0-9a-f]{40})").matcher(block.command);
+            if (head.find()) {
+                block.headSha = head.group(1);
+            }
+            String summary = substantiveReviewSummary(block.command);
+            String key = "posted\u0000" + summary;
+            if (session.changeRequestKeys.add(key)) {
+                ObjectNode classification = classification(
+                        "product_defect", "completeness_gap", "STAGE_30_CHANGE_REQUEST",
+                        "The stage-30 gate requested a substantive code or test change.");
+                ObjectNode event = addEvent(session, block, "stage_30_change_request",
+                        "stage_30_gate", null, classification);
+                Matcher pr = Pattern.compile("PR_NUMBER=(\\d+)").matcher(block.command);
+                if (pr.find()) {
+                    event.put("prNumber", Integer.parseInt(pr.group(1)));
+                }
+                ((ObjectNode) event.path("evidence")).put("excerpt", summary);
+            }
+            return;
+        }
+        if (!block.output.contains("\"CHANGES_REQUESTED\"")
+                || !session.changeRequestKeys.isEmpty()) {
             return;
         }
         for (JsonNode root : parseJsonValues(block.output)) {
@@ -1156,6 +1278,7 @@ public class CampaignEvaluator {
                     node.forEach(pending::addLast);
                     continue;
                 }
+
                 if (!node.isObject()) {
                     continue;
                 }
@@ -1176,6 +1299,22 @@ public class CampaignEvaluator {
                 node.elements().forEachRemaining(pending::addLast);
             }
         }
+    }
+
+    private static String substantiveReviewSummary(String command) {
+        Matcher fix = Pattern.compile("(?m)^\\*\\*Fix:\\*\\*\\s*(.+)$").matcher(command);
+        if (fix.find()) {
+            return "Missing facade test: "
+                    + excerpt(fix.group(1).replaceAll("';.*$", ""), 470);
+        }
+        return Arrays.stream(command.split("\\R"))
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .filter(line -> !line.startsWith("@copilot"))
+                .filter(line -> !line.startsWith("REVIEW_BODY="))
+                .filter(line -> !line.startsWith("##"))
+                .findFirst().map(line -> excerpt(line, 500))
+                .orElse("Stage-30 change request");
     }
 
     private void parseCommitEvidence(SessionResult session, ToolBlock block) {
@@ -1200,6 +1339,20 @@ public class CampaignEvaluator {
                 if (task != null && task.gitTask != null) {
                     resolution.put("status", "fixed");
                     resolution.put("headSha", task.gitTask.headSha);
+                    long offset = event.path("relativeOffsetSeconds").asLong();
+                    sessions.stream()
+                            .filter(session -> session.issue == issue)
+                            .filter(session -> session.shepherdStage
+                                    == event.path("shepherdStage").asInt())
+                            .flatMap(session -> session.toolBlocks.stream()
+                                    .map(block -> Map.entry(session, block)))
+                            .filter(entry -> entry.getValue().relativeSeconds > offset)
+                            .filter(entry -> task.gitTask.headSha.equals(
+                                    entry.getValue().headSha))
+                            .findFirst()
+                            .ifPresent(entry -> resolution.put("timestamp",
+                                    entry.getKey().startedAt.plusSeconds(
+                                            entry.getValue().relativeSeconds).toString()));
                     resolution.put("summary",
                             "The task's final PR head contains the accepted remediation.");
                     continue;
@@ -1227,6 +1380,25 @@ public class CampaignEvaluator {
                     resolution.put("status", "recovered");
                     resolution.put("summary",
                             "A later tool invocation completed successfully in the same session.");
+                }
+            }
+            if ("infrastructure".equals(category)
+                    && "missing_tool_dependency".equals(
+                    event.path("classification").path("subtype").asText())) {
+                long offset = event.path("relativeOffsetSeconds").asLong();
+                boolean recovered = sessions.stream()
+                        .filter(session -> session.issue == issue)
+                        .filter(session -> session.shepherdStage
+                                == event.path("shepherdStage").asInt())
+                        .flatMap(session -> session.toolBlocks.stream())
+                        .anyMatch(block -> block.relativeSeconds > offset
+                                && block.exitCode != null && block.exitCode == 0
+                                && (Objects.toString(block.command, "").contains("playwright")
+                                || Objects.toString(block.command, "").contains("acceptance.mjs")));
+                if (recovered) {
+                    resolution.put("status", "recovered");
+                    resolution.put("summary",
+                            "A later browser acceptance invocation succeeded in the same session.");
                 }
             }
         }
@@ -1356,6 +1528,9 @@ public class CampaignEvaluator {
                 defect = JSON.createObjectNode();
                 defect.put("id", "defect-" + (defects.size() + 1));
                 defect.put("taskIssue", event.path("taskIssue").asInt());
+                copyNullable(event, defect, "prNumber");
+                defect.put("categorySubtype",
+                        event.path("classification").path("subtype").asText());
                 defect.put("summary", summarizeDefect(event));
                 ObjectNode first = defect.putObject("firstDetection");
                 first.put("eventId", event.path("id").asText());
@@ -1368,17 +1543,46 @@ public class CampaignEvaluator {
                 resolution.put("status",
                         event.path("resolution").path("status").asText("unknown"));
                 if (event.path("resolution").path("headSha").isTextual()) {
-                    resolution.put("commit",
-                            event.path("resolution").path("headSha").asText());
+                    String commit = event.path("resolution").path("headSha").asText();
+                    resolution.put("commit", commit);
+                    Instant fixedAt = event.path("resolution").path("timestamp").isTextual()
+                            ? Instant.parse(event.path("resolution").path("timestamp").asText())
+                            : gitCommitTime(commit);
+                    if (fixedAt != null) {
+                        resolution.put("fixedAt", fixedAt.toString());
+                        if (event.path("timestamp").isTextual()) {
+                            resolution.put("timeToFixSeconds", Math.max(0,
+                                    Duration.between(Instant.parse(event.path("timestamp").asText()),
+                                            fixedAt).getSeconds()));
+                        }
+                    } else {
+                        resolution.putNull("fixedAt");
+                        resolution.putNull("timeToFixSeconds");
+                    }
                 } else {
                     resolution.putNull("commit");
+                    resolution.putNull("fixedAt");
+                    resolution.putNull("timeToFixSeconds");
                 }
                 defects.put(fingerprint, defect);
             }
             ((ArrayNode) defect.path("occurrenceEventIds")).add(event.path("id").asText());
-            event.put("underlyingProblemId", defect.path("id").asText());
+            defect.put("occurrenceCount",
+                    defect.path("occurrenceEventIds").size());
         }
         return new ArrayList<>(defects.values());
+    }
+
+    private Instant gitCommitTime(String commit) {
+        if (config.repo == null || commit == null || commit.isBlank()) return null;
+        CommandResult result = command(List.of(
+                "git", "-C", config.repo.toString(), "show", "-s",
+                "--format=%cI", commit), null, Map.of());
+        try {
+            return result.exitCode == 0 ? Instant.parse(result.output.trim()) : null;
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
     }
 
     private static String defectFingerprint(ObjectNode event) {
@@ -1563,6 +1767,7 @@ public class CampaignEvaluator {
             perTask.add(node);
         }
         result.set("campaignDiff", campaignDiff.toJson());
+        result.set("baselineVerification", baselineVerification(startSha));
         result.set("testIntegrity", testIntegrity(startSha, finalSha));
         result.set("dry", cpdComparison(startSha, finalSha));
         result.set("buildWarnings", config.withBuild
@@ -1681,6 +1886,11 @@ public class CampaignEvaluator {
                 .matcher(pom).find();
         baseline.put("testsRunByDefault", !skipTests);
         baseline.put("skipTests", skipTests);
+        baseline.put("mavenCompilerSource", pomProperty(pom, "maven.compiler.source"));
+        baseline.put("mavenCompilerTarget", pomProperty(pom, "maven.compiler.target"));
+        String release = pomProperty(pom, "maven.compiler.release");
+        if (release == null) baseline.putNull("mavenCompilerRelease");
+        else baseline.put("mavenCompilerRelease", release);
         baseline.put("testExecutionMode",
                 skipTests ? "compiled_but_not_executed" : "executed");
         baseline.put("containerTestTarget",
@@ -1785,6 +1995,41 @@ public class CampaignEvaluator {
         return result;
     }
 
+    private static String pomProperty(String pom, String name) {
+        Matcher matcher = Pattern.compile("<" + Pattern.quote(name)
+                + ">\\s*([^<]+?)\\s*</" + Pattern.quote(name) + ">",
+                Pattern.CASE_INSENSITIVE).matcher(pom);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private ObjectNode baselineVerification(String startSha) {
+        ObjectNode result = JSON.createObjectNode();
+        String enablement = "e7b651f";
+        CommandResult ancestor = command(List.of(
+                "git", "-C", config.repo.toString(), "merge-base", "--is-ancestor",
+                enablement, startSha), null, Map.of());
+        result.put("baselineEnablementCommit", enablement);
+        result.put("isAncestorOfStartSha", ancestor.exitCode == 0);
+        CommandResult stat = command(List.of(
+                "git", "-C", config.repo.toString(), "diff", "--stat",
+                enablement + ".." + startSha), null, Map.of());
+        result.put("diffStat", stat.output.strip());
+        if ("treatment".equals(config.arm)) {
+            CommandResult parent = command(List.of(
+                    "git", "-C", config.repo.toString(), "rev-parse", startSha + "^"),
+                    null, Map.of());
+            if (parent.exitCode == 0) {
+                String controlStart = parent.output.trim();
+                result.put("controlArmStartSha", controlStart);
+                CommandResult treatment = command(List.of(
+                        "git", "-C", config.repo.toString(), "diff", "--stat",
+                        controlStart + ".." + startSha), null, Map.of());
+                result.put("treatmentCommitDiffStat", treatment.output.strip());
+            }
+        }
+        return result;
+    }
+
     private String gitShow(String sha, String path) {
         CommandResult result = command(List.of(
                 "git", "-C", config.repo.toString(), "show", sha + ":" + path),
@@ -1836,6 +2081,7 @@ public class CampaignEvaluator {
             int production = 0;
             int tests = 0;
             int lines = 0;
+            List<ObjectNode> locations = new ArrayList<>();
             while (duplication.find()) {
                 int duplicateLines = Integer.parseInt(duplication.group(1));
                 String body = duplication.group(2);
@@ -1845,8 +2091,25 @@ public class CampaignEvaluator {
                 } else {
                     production++;
                 }
+                Matcher file = Pattern.compile("<file\\s+([^>]+)/?>").matcher(body);
+                while (file.find()) {
+                    String attributes = file.group(1);
+                    Matcher line = Pattern.compile("\\bline=\"(\\d+)\"").matcher(attributes);
+                    Matcher endLine = Pattern.compile("\\bendline=\"(\\d+)\"").matcher(attributes);
+                    Matcher path = Pattern.compile("\\bpath=\"([^\"]+)\"").matcher(attributes);
+                    if (!line.find() || !endLine.find() || !path.find()) continue;
+                    ObjectNode location = JSON.createObjectNode();
+                    String filePath = path.group(1);
+                    int source = filePath.indexOf("/src/");
+                    location.put("path", source >= 0
+                            ? filePath.substring(source + 1) : filePath);
+                    location.put("startLine", Integer.parseInt(line.group(1)));
+                    location.put("endLine", Integer.parseInt(endLine.group(1)));
+                    location.put("duplicatedLines", duplicateLines);
+                    locations.add(location);
+                }
             }
-            return CpdResult.available(production, tests, lines);
+            return CpdResult.available(production, tests, lines, locations);
         } catch (Exception error) {
             return CpdResult.unavailable(error.getMessage());
         } finally {
@@ -1945,6 +2208,8 @@ public class CampaignEvaluator {
         value.put("name", EVALUATOR_NAME);
         value.put("version", evaluatorVersion);
         value.put("gitCommit", evaluatorCommit);
+        value.put("worktreeDirty", evaluatorDirty);
+        value.put("sourceDirectory", evaluatorDir.toString());
         value.put("generatedAt", Instant.now().toString());
         value.put("platform", System.getProperty("os.name") + "-"
                 + System.getProperty("os.arch"));
@@ -1976,6 +2241,8 @@ public class CampaignEvaluator {
         value.put("jsonlSessionTimeMs", jsonlSessionMs);
         value.put("durationSourceDifferenceMs", jsonlSessionMs - sessionSeconds * 1000);
         value.put("primarySessionDurationSource", "markdown_header_truncated_seconds");
+        value.put("transcriptTimestampConversionMethod",
+                "Local header timestamps are converted with the UTC offset that best aligns the header start with the first JSONL timestamp.");
         value.put("orchestrationOverheadSeconds", campaignSeconds - sessionSeconds);
         value.put("evaluatorVersion", evaluatorVersion);
         value.put("evaluatorGitCommit", evaluatorCommit);
@@ -2108,13 +2375,68 @@ public class CampaignEvaluator {
         return array(all);
     }
 
-    private ObjectNode aggregateHallucinations(List<SessionResult> sessions) {
+    private ObjectNode aggregateHallucinations() {
         ObjectNode result = JSON.createObjectNode();
-        result.put("productCodeSignals", sessions.stream()
-                .mapToInt(value -> value.productHallucinationSignals).sum());
-        result.put("toolingSignals", sessions.stream()
-                .mapToInt(value -> value.toolingHallucinationSignals).sum());
+        List<ObjectNode> tooling = events.stream()
+                .filter(event -> "malformed_invocation".equals(
+                        event.path("classification").path("subtype").asText())
+                        || "nonexistent_plugin".equals(
+                        event.path("classification").path("subtype").asText()))
+                .filter(event -> "nonzero_tool_exit".equals(event.path("eventKind").asText()))
+                .toList();
+        ObjectNode product = result.putObject("productCode");
+        product.put("eventCount", 0);
+        product.put("distinctSignatureCount", 0);
+        product.putArray("evidenceIds");
+        ObjectNode tools = result.putObject("tooling");
+        tools.put("eventCount", tooling.size());
+        tools.put("distinctSignatureCount", tooling.stream()
+                .map(event -> event.path("recurrenceSignature").asText())
+                .distinct().count());
+        ArrayNode evidence = tools.putArray("evidenceIds");
+        tooling.forEach(event -> evidence.add(event.path("id").asText()));
         return result;
+    }
+
+    private ArrayNode aggregateUnderlyingProblems() {
+        Map<String, ObjectNode> problems = new LinkedHashMap<>();
+        for (ObjectNode event : events) {
+            String id = event.path("underlyingProblemId").asText();
+            ObjectNode problem = problems.computeIfAbsent(id, ignored -> {
+                ObjectNode value = JSON.createObjectNode();
+                value.put("id", id);
+                value.put("recurrenceSignature", event.path("recurrenceSignature").asText());
+                value.putArray("eventIds");
+                return value;
+            });
+            ((ArrayNode) problem.path("eventIds")).add(event.path("id").asText());
+        }
+        return array(new ArrayList<>(problems.values()));
+    }
+
+    private ArrayNode aggregateRecurrences() {
+        Map<String, ObjectNode> signatures = new TreeMap<>();
+        for (ObjectNode event : events) {
+            String signature = event.path("recurrenceSignature").asText();
+            ObjectNode value = signatures.computeIfAbsent(signature, ignored -> {
+                ObjectNode node = JSON.createObjectNode();
+                node.put("signature", signature);
+                node.put("occurrenceCount", 0);
+                node.putArray("eventIds");
+                node.putArray("sessions");
+                return node;
+            });
+            value.put("occurrenceCount", value.path("occurrenceCount").asInt() + 1);
+            ((ArrayNode) value.path("eventIds")).add(event.path("id").asText());
+            ArrayNode sessionIds = (ArrayNode) value.path("sessions");
+            String session = event.path("sessionId").asText();
+            boolean present = false;
+            for (JsonNode existing : sessionIds) {
+                present |= session.equals(existing.asText());
+            }
+            if (!present) sessionIds.add(session);
+        }
+        return array(new ArrayList<>(signatures.values()));
     }
 
     private ObjectNode aggregateConvergence(List<SessionResult> sessions) {
@@ -2128,7 +2450,17 @@ public class CampaignEvaluator {
         result.put("stage30Remediations", events.stream()
                 .filter(event -> "stage_30_change_request".equals(
                         event.path("eventKind").asText())).count());
-        result.put("ciReruns", sessions.stream().mapToInt(value -> value.ciReruns).sum());
+        List<ObjectNode> ci = sessions.stream()
+                .flatMap(value -> value.transitions.stream())
+                .filter(value -> "Shepherd task Cargo Tracker".equals(
+                        value.path("check").asText())).toList();
+        long distinctHeads = ci.stream().map(value -> value.path("headSha").asText())
+                .filter(Predicate.not(String::isBlank)).distinct().count();
+        result.put("ciRuns", distinctHeads);
+        result.put("ciRerunsSameHead", 0);
+        result.put("ciObservationCount", ci.size());
+        result.put("ciRunCountingMethod",
+                "Distinct substantive check head SHAs; repeated transcript observations are not reruns.");
         result.put("reviewCapEvents", sessions.stream()
                 .mapToInt(value -> value.reviewCapEvents).sum());
         result.put("timeoutEvents", sessions.stream()
@@ -2157,8 +2489,10 @@ public class CampaignEvaluator {
                 .mapToInt(value -> value.flakyUnitTestFailures).sum());
         flakiness.put("flakyArquillianContainerTestFailures", sessions.stream()
                 .mapToInt(value -> value.flakyContainerTestFailures).sum());
-        flakiness.put("leftoverStateFailures", sessions.stream()
-                .mapToInt(value -> value.leftoverStateFailures).sum());
+        flakiness.put("leftoverStateFailures", Math.max(
+                sessions.stream().mapToInt(value -> value.leftoverStateFailures).sum(),
+                (int) events.stream().filter(event -> "leftover_state".equals(
+                        event.path("classification").path("subtype").asText())).count()));
         flakiness.put("otherKnownCauseFailures", sessions.stream()
                 .mapToInt(value -> value.otherKnownCauseFlakyFailures).sum());
         flakiness.put("unknownCauseFailures", sessions.stream()
@@ -2420,6 +2754,10 @@ public class CampaignEvaluator {
         List<String> columns = List.of(
                 "schema_version", "evaluator_version", "evaluator_git_commit", "arm",
                 "campaign_id", "row_type", "task_issue", "pr_number",
+                "first_detection_gate", "compiler_defects", "static_analysis_defects",
+                "unit_tests_defects", "arquillian_container_tests_defects",
+                "ci_defects", "ccra_review_defects", "stage_30_gate_defects",
+                "functional_acceptance_defects",
                 "session_count", "recorded_session_seconds", "jsonl_session_ms",
                 "duration_source_difference_ms", "cca_wait_polls",
                 "cca_wait_elapsed_seconds", "cca_wait_ceiling_seconds",
@@ -2432,6 +2770,10 @@ public class CampaignEvaluator {
                 "local_environment_events", "agent_tool_invocation_events",
                 "agent_authored_test_harness_events", "ci_runner_events",
                 "external_service_events",
+                "product_code_problems", "shepherd_harness_problems",
+                "local_environment_problems", "agent_tool_invocation_problems",
+                "agent_authored_test_harness_problems", "ci_runner_problems",
+                "external_service_problems",
                 "files_changed", "additions", "deletions", "test_tampering_meaningfulness");
         StringBuilder csv = new StringBuilder();
         csv.append(columns.stream().map(CampaignEvaluator::csv).collect(Collectors.joining(",")))
@@ -2450,6 +2792,7 @@ public class CampaignEvaluator {
             }
             row.put("test_tampering_meaningfulness",
                     testMeaningfulness(root, task.issue));
+            fillDefectCsvColumns(row, Set.of(task.issue));
             appendCsv(csv, columns, row);
         }
         Map<String, Object> campaign = baseCsvRow(manifest, "campaign");
@@ -2463,6 +2806,8 @@ public class CampaignEvaluator {
         campaign.put("test_tampering_meaningfulness",
                 root.path("repositoryAnalysis").path("testIntegrity")
                         .path("meaningfulness").path("status").asText(""));
+        fillDefectCsvColumns(campaign, sessions.stream()
+                .map(value -> value.issue).collect(Collectors.toSet()));
         appendCsv(csv, columns, campaign);
         Files.writeString(config.outputDir.resolve("summary.csv"), csv,
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE,
@@ -2471,7 +2816,7 @@ public class CampaignEvaluator {
 
     private Map<String, Object> baseCsvRow(JsonNode manifest, String rowType) {
         Map<String, Object> row = new HashMap<>();
-        row.put("schema_version", "1.1");
+        row.put("schema_version", "1.2");
         row.put("evaluator_version", evaluatorVersion);
         row.put("evaluator_git_commit", evaluatorCommit);
         row.put("arm", config.arm);
@@ -2513,7 +2858,15 @@ public class CampaignEvaluator {
         row.put("flaky_test_failures",
                 sessions.stream().mapToInt(value -> value.flakyTestFailures).sum());
         row.put("leftover_state_failures",
-                sessions.stream().mapToInt(value -> value.leftoverStateFailures).sum());
+                Math.max(sessions.stream().mapToInt(
+                                value -> value.leftoverStateFailures).sum(),
+                        events.stream()
+                                .filter(event -> issues.contains(
+                                        event.path("taskIssue").asInt()))
+                                .filter(event -> "leftover_state".equals(
+                                        event.path("classification")
+                                                .path("subtype").asText()))
+                                .count()));
         BigDecimal aiu = sessions.stream().map(value -> value.nanoAiu)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .divide(BigDecimal.valueOf(1_000_000_000L));
@@ -2537,7 +2890,76 @@ public class CampaignEvaluator {
                     .filter(event -> issues.contains(event.path("taskIssue").asInt()))
                     .filter(event -> origin.equals(event.path("classification")
                             .path("origin").asText())).count());
+            row.put(origin + "_problems", events.stream()
+                    .filter(event -> issues.contains(event.path("taskIssue").asInt()))
+                    .filter(event -> origin.equals(event.path("classification")
+                            .path("origin").asText()))
+                    .collect(Collectors.toMap(
+                            event -> event.path("underlyingProblemId").asText(),
+                            event -> event, (left, right) -> left))
+                    .size());
         }
+    }
+
+    private void fillDefectCsvColumns(Map<String, Object> row, Set<Integer> issues) {
+        List<ObjectNode> product = events.stream()
+                .filter(event -> issues.contains(event.path("taskIssue").asInt()))
+                .filter(event -> "product_defect".equals(
+                        event.path("classification").path("category").asText()))
+                .sorted(Comparator.comparing(event -> event.path("timestamp").asText()))
+                .toList();
+        row.put("first_detection_gate", product.isEmpty() ? ""
+                : product.get(0).path("detectionGate").asText());
+        for (String gate : List.of("compiler", "static_analysis", "unit_tests",
+                "arquillian_container_tests", "ci", "ccra_review",
+                "stage_30_gate", "functional_acceptance")) {
+            row.put(gate + "_defects", product.stream()
+                    .filter(event -> gate.equals(event.path("detectionGate").asText()))
+                    .count());
+        }
+    }
+
+    private void writeDefectsCsv(JsonNode manifest, List<ObjectNode> defects)
+            throws IOException {
+        List<String> columns = List.of(
+                "schema_version", "evaluator_version", "evaluator_git_commit", "arm",
+                "campaign_id", "defect_id", "task_issue", "pr_number",
+                "category_subtype", "detection_gate", "shepherd_stage",
+                "detected_at", "detected_head_sha", "fix_commit", "fixed_at",
+                "time_to_fix_seconds", "occurrence_count", "evidence_ids");
+        StringBuilder output = new StringBuilder();
+        output.append(columns.stream().map(CampaignEvaluator::csv)
+                .collect(Collectors.joining(","))).append('\n');
+        for (ObjectNode defect : defects) {
+            Map<String, Object> row = baseCsvRow(manifest, "defect");
+            row.put("defect_id", defect.path("id").asText());
+            row.put("task_issue", defect.path("taskIssue").asInt());
+            row.put("pr_number", defect.path("prNumber").isNull() ? ""
+                    : defect.path("prNumber").asText());
+            row.put("category_subtype", defect.path("categorySubtype").asText());
+            JsonNode first = defect.path("firstDetection");
+            row.put("detection_gate", first.path("detectionGate").asText());
+            row.put("shepherd_stage", first.path("shepherdStage").asInt());
+            row.put("detected_at", first.path("timestamp").asText(""));
+            row.put("detected_head_sha", first.path("headSha").asText(""));
+            JsonNode resolution = defect.path("resolution");
+            row.put("fix_commit", resolution.path("commit").asText(""));
+            row.put("fixed_at", resolution.path("fixedAt").asText(""));
+            row.put("time_to_fix_seconds", resolution.path("timeToFixSeconds").asText(""));
+            row.put("occurrence_count", defect.path("occurrenceCount").asInt());
+            row.put("evidence_ids", String.join(";",
+                    toStrings(defect.path("occurrenceEventIds"))));
+            appendCsv(output, columns, row);
+        }
+        Files.writeString(config.outputDir.resolve("defects.csv"), output,
+                StandardCharsets.UTF_8, StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    private static List<String> toStrings(JsonNode array) {
+        List<String> values = new ArrayList<>();
+        array.forEach(value -> values.add(value.asText()));
+        return values;
     }
 
     private static Object nullableText(JsonNode node, String field) {
@@ -2576,7 +2998,12 @@ public class CampaignEvaluator {
                 .append("- **Campaign:** `").append(manifest.path("campaignId").asText()).append("`\n")
                 .append("- **Evaluator:** `").append(evaluatorVersion).append("` at `")
                 .append(evaluatorCommit).append("`\n")
+                .append("- **Evaluator worktree dirty:** ").append(evaluatorDirty).append("\n")
                 .append("- **Generated:** ").append(Instant.now()).append("\n\n");
+        if ("unversioned".equals(evaluatorVersion)
+                || "unversioned".equals(evaluatorCommit)) {
+            report.append("> [!WARNING]\n> This evaluation was explicitly allowed to run without versioned evaluator provenance.\n\n");
+        }
 
         report.append("## Headline findings\n\n")
                 .append("| Task | PR | First product-defect detection | Product defects | Nonzero exits | CCRA rounds | CCRA comments | Flaky tests |\n")
@@ -2694,6 +3121,7 @@ public class CampaignEvaluator {
         for (JsonNode note : root.path("interpretationNotes")) {
             report.append("- ").append(note.asText()).append("\n");
         }
+        report.append("- Test-tampering metrics are comparable only within an arm where tests run by default; the control arm is `not_meaningful`, so this is not a between-arm tampering comparison.\n");
 
         Files.writeString(config.outputDir.resolve("report.md"), report,
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE,
@@ -2860,17 +3288,22 @@ public class CampaignEvaluator {
         final String arm;
         final Path repo;
         final Path outputDir;
+        final Path evaluatorDir;
         final boolean withBuild;
+        final boolean allowUnversioned;
         final List<String> invocation;
 
         private Config(
                 Path campaignDir, String arm, Path repo, Path outputDir,
-                boolean withBuild, List<String> invocation) {
+                Path evaluatorDir, boolean withBuild, boolean allowUnversioned,
+                List<String> invocation) {
             this.campaignDir = campaignDir;
             this.arm = arm;
             this.repo = repo;
             this.outputDir = outputDir;
+            this.evaluatorDir = evaluatorDir;
             this.withBuild = withBuild;
+            this.allowUnversioned = allowUnversioned;
             this.invocation = invocation;
         }
 
@@ -2882,7 +3315,9 @@ public class CampaignEvaluator {
             String arm = null;
             Path repo = null;
             Path output = null;
+            Path evaluatorDir = null;
             boolean withBuild = false;
+            boolean allowUnversioned = false;
             for (int index = 0; index < args.length; index++) {
                 String argument = args[index];
                 switch (argument) {
@@ -2891,7 +3326,11 @@ public class CampaignEvaluator {
                             .toAbsolutePath().normalize();
                     case "--out" -> output = Paths.get(requireValue(args, ++index, "--out"))
                             .toAbsolutePath().normalize();
+                    case "--evaluator-dir" -> evaluatorDir = Paths.get(
+                            requireValue(args, ++index, "--evaluator-dir"))
+                            .toAbsolutePath().normalize();
                     case "--with-build" -> withBuild = true;
+                    case "--allow-unversioned" -> allowUnversioned = true;
                     default -> {
                         if (argument.startsWith("--")) {
                             throw new UsageException("Unknown option: " + argument);
@@ -2912,7 +3351,17 @@ public class CampaignEvaluator {
             if (output == null) {
                 output = campaign.resolveSibling(campaign.getFileName() + "-eval");
             }
-            return new Config(campaign, arm, repo, output, withBuild,
+            if (evaluatorDir == null) {
+                String source = System.getProperty("jbang.source");
+                if (source != null && !source.isBlank()) {
+                    evaluatorDir = Paths.get(source).toAbsolutePath().normalize().getParent();
+                }
+            }
+            if (evaluatorDir == null) {
+                throw new UsageException("Evaluator source directory was not supplied by the launcher.");
+            }
+            return new Config(campaign, arm, repo, output, evaluatorDir,
+                    withBuild, allowUnversioned,
                     List.of(args.clone()));
         }
 
@@ -2960,7 +3409,10 @@ public class CampaignEvaluator {
         final Map<String, Long> skillContentLengths = new TreeMap<>();
         String sessionId;
         Integer prNumber;
+        LocalDateTime headerLocalStart;
+        Instant firstJsonlTimestamp;
         Instant startedAt;
+        String timestampConversionMethod;
         long durationSeconds;
         long jsonlDurationMs;
         long partialOutputUnicodeCodePoints;
@@ -3026,6 +3478,7 @@ public class CampaignEvaluator {
                 value.put("prNumber", prNumber);
             }
             value.put("startedAt", startedAt == null ? null : startedAt.toString());
+            value.put("timestampConversionMethod", timestampConversionMethod);
             value.put("durationSeconds", durationSeconds);
             value.put("jsonlDurationMs", jsonlDurationMs);
             value.set("aiu", metric(nanoAiu.divide(BigDecimal.valueOf(1_000_000_000L)),
@@ -3230,24 +3683,27 @@ public class CampaignEvaluator {
         final int productionBlocks;
         final int testBlocks;
         final int duplicatedLines;
+        final List<ObjectNode> locations;
         final String reason;
 
         private CpdResult(
                 boolean available, int productionBlocks, int testBlocks,
-                int duplicatedLines, String reason) {
+                int duplicatedLines, List<ObjectNode> locations, String reason) {
             this.available = available;
             this.productionBlocks = productionBlocks;
             this.testBlocks = testBlocks;
             this.duplicatedLines = duplicatedLines;
+            this.locations = locations;
             this.reason = reason;
         }
 
-        static CpdResult available(int production, int tests, int lines) {
-            return new CpdResult(true, production, tests, lines, null);
+        static CpdResult available(
+                int production, int tests, int lines, List<ObjectNode> locations) {
+            return new CpdResult(true, production, tests, lines, locations, null);
         }
 
         static CpdResult unavailable(String reason) {
-            return new CpdResult(false, 0, 0, 0, reason);
+            return new CpdResult(false, 0, 0, 0, List.of(), reason);
         }
 
         ObjectNode toJson() {
@@ -3257,6 +3713,7 @@ public class CampaignEvaluator {
                 value.put("productionBlocks", productionBlocks);
                 value.put("testBlocks", testBlocks);
                 value.put("duplicatedLines", duplicatedLines);
+                value.set("locations", array(locations));
             } else {
                 value.put("reason", reason);
                 value.putNull("productionBlocks");
