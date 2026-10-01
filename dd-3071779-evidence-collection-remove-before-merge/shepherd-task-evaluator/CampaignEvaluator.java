@@ -94,6 +94,8 @@ public class CampaignEvaluator {
             "\"shellId\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern BACKGROUND_SHELL = Pattern.compile(
             "<(?:command with )?shellId:\\s*([^\\s>]+)");
+    private static final Pattern COMPLETED_SHELL = Pattern.compile(
+            "<shellId:\\s*([^\\s>]+)\\s+completed\\s+with\\s+exit\\s+code");
     private static final Pattern JAVA_INVOCATION = Pattern.compile(
             "(?m)(?:^|[;&|]\\s*|\\s)(\\./mvnw|mvn|java|javac)\\b");
 
@@ -376,7 +378,9 @@ public class CampaignEvaluator {
                     result.partialOutputEvents++;
                     String toolCallId = data.path("toolCallId").asText();
                     String partial = data.path("partialOutput").asText("");
-                    result.partialOutputCharacters += partial.length();
+                    result.partialOutputUtf16CodeUnits += partial.length();
+                    result.partialOutputUnicodeCodePoints +=
+                            partial.codePointCount(0, partial.length());
                     result.partialOutputs.put(toolCallId, partial);
                 } else if ("assistant.reasoning_delta".equals(type)) {
                     result.reasoningDeltaEvents++;
@@ -400,7 +404,13 @@ public class CampaignEvaluator {
                     String skillHash = telemetry.path("properties")
                             .path("skillNameHash").asText("");
                     if (!skillName.isBlank() && !skillHash.isBlank()) {
-                        result.skillHashes.put(skillName, skillHash);
+                        result.skillNameHashes.put(skillName, skillHash);
+                    }
+                    JsonNode skillLength = telemetry.path("metrics")
+                            .path("skillContentLength");
+                    if (!skillName.isBlank() && skillLength.isNumber()) {
+                        result.skillContentLengths.put(
+                                skillName, skillLength.asLong());
                     }
                     String external = data.path("toolTelemetry").path("properties")
                             .path("largeSessionLogWrittenToFile").asText();
@@ -567,6 +577,10 @@ public class CampaignEvaluator {
             session.toolBlocks.add(block);
             if (block.output.contains("Tests are skipped.")) {
                 session.testsSkippedMessages++;
+                if (block.command != null && block.command.contains("gh run view")
+                        && block.command.contains("--log")) {
+                    session.ciTestsSkippedMessages++;
+                }
             }
             recordJavaInvocation(session, block);
             classifyToolBlock(session, block);
@@ -647,7 +661,7 @@ public class CampaignEvaluator {
     }
 
     private static void calculateCcaWait(SessionResult session) {
-        Set<String> remoteShells = new HashSet<>();
+        Map<String, Long> remoteShellStarts = new HashMap<>();
         for (ToolBlock block : session.toolBlocks) {
             if (!"bash".equals(block.tool) || block.command == null
                     || !block.command.contains("copilot_work_finished")) {
@@ -655,18 +669,28 @@ public class CampaignEvaluator {
             }
             Matcher shell = BACKGROUND_SHELL.matcher(block.output);
             while (shell.find()) {
-                remoteShells.add(shell.group(1));
+                remoteShellStarts.put(shell.group(1), block.relativeSeconds);
             }
         }
+        Set<String> completedShells = new HashSet<>();
         for (ToolBlock block : session.toolBlocks) {
             if (!"read_bash".equals(block.tool)) {
                 continue;
             }
             Matcher shell = READ_BASH_SHELL.matcher(block.raw);
             Matcher delay = READ_BASH_DELAY.matcher(block.raw);
-            if (shell.find() && delay.find() && remoteShells.contains(shell.group(1))) {
+            if (shell.find() && delay.find()
+                    && remoteShellStarts.containsKey(shell.group(1))) {
                 session.ccaWaitPollCount++;
-                session.ccaWaitSeconds += Integer.parseInt(delay.group(1));
+                session.ccaWaitConfiguredCeilingSeconds +=
+                        Integer.parseInt(delay.group(1));
+                Matcher completed = COMPLETED_SHELL.matcher(block.raw);
+                if (completed.find() && completed.group(1).equals(shell.group(1))
+                        && completedShells.add(shell.group(1))) {
+                    session.ccaWaitElapsedSeconds += Math.max(
+                            0, block.relativeSeconds
+                                    - remoteShellStarts.get(shell.group(1)));
+                }
             }
         }
     }
@@ -1990,8 +2014,11 @@ public class CampaignEvaluator {
         ObjectNode crossCheck = value.putObject("jsonlPartialOutputCrossCheck");
         crossCheck.put("eventCount", sessions.stream()
                 .mapToInt(session -> session.partialOutputEvents).sum());
-        crossCheck.put("characterCount", sessions.stream()
-                .mapToLong(session -> session.partialOutputCharacters).sum());
+        crossCheck.put("unicodeCodePointCount", sessions.stream()
+                .mapToLong(session -> session.partialOutputUnicodeCodePoints).sum());
+        crossCheck.put("utf16CodeUnitCount", sessions.stream()
+                .mapToLong(session -> session.partialOutputUtf16CodeUnits).sum());
+        crossCheck.put("primaryCharacterUnit", "Unicode code points");
         crossCheck.put("failureEventsCorroborated", events.stream()
                 .filter(event -> event.path("evidence")
                         .path("partialOutputCorroborated").asBoolean()).count());
@@ -2038,8 +2065,11 @@ public class CampaignEvaluator {
                     taskSessions.stream().mapToLong(value -> value.jsonlDurationMs).sum());
             node.put("ccaWaitPollCount",
                     taskSessions.stream().mapToInt(value -> value.ccaWaitPollCount).sum());
-            node.put("ccaWaitSeconds",
-                    taskSessions.stream().mapToLong(value -> value.ccaWaitSeconds).sum());
+            node.put("ccaWaitElapsedSeconds",
+                    taskSessions.stream().mapToLong(value -> value.ccaWaitElapsedSeconds).sum());
+            node.put("ccaWaitConfiguredCeilingSeconds",
+                    taskSessions.stream().mapToLong(
+                            value -> value.ccaWaitConfiguredCeilingSeconds).sum());
             node.put("nonzeroToolExits",
                     taskSessions.stream().mapToInt(value -> value.nonzeroToolExits).sum());
             node.put("reviewRounds",
@@ -2106,15 +2136,20 @@ public class CampaignEvaluator {
         result.put("idleKillEvents", sessions.stream()
                 .mapToInt(value -> value.idleKillEvents).sum());
         ObjectNode ccaWait = result.putObject("ccaWait");
-        long waitSeconds = sessions.stream().mapToLong(value -> value.ccaWaitSeconds).sum();
+        long waitSeconds = sessions.stream()
+                .mapToLong(value -> value.ccaWaitElapsedSeconds).sum();
         long sessionSeconds = sessions.stream().mapToLong(value -> value.durationSeconds).sum();
         ccaWait.put("pollCount", sessions.stream()
                 .mapToInt(value -> value.ccaWaitPollCount).sum());
-        ccaWait.put("seconds", waitSeconds);
+        ccaWait.put("elapsedSeconds", waitSeconds);
+        ccaWait.put("configuredPollCeilingSeconds", sessions.stream()
+                .mapToLong(value -> value.ccaWaitConfiguredCeilingSeconds).sum());
+        ccaWait.put("elapsedMethod",
+                "Transcript offset from remote background-shell start to its completed read_bash block.");
         ccaWait.put("shareOfRecordedSessionTime",
                 sessionSeconds == 0 ? 0.0 : waitSeconds / (double) sessionSeconds);
         ccaWait.put("interpretation",
-                "Proxy for remote coding-agent latency; not remote-agent token or AIU cost.");
+                "Elapsed local waiting proxy; not CCA execution cost or remote-agent telemetry.");
         ObjectNode flakiness = result.putObject("flakiness");
         flakiness.put("flakyTestFailures", sessions.stream()
                 .mapToInt(value -> value.flakyTestFailures).sum());
@@ -2168,16 +2203,28 @@ public class CampaignEvaluator {
         ArrayNode cli = result.putArray("copilotCliVersions");
         sessions.stream().flatMap(session -> session.copilotCliVersions.stream())
                 .distinct().sorted().forEach(cli::add);
-        ObjectNode hashes = result.putObject("skillContentHashes");
+        ObjectNode hashes = result.putObject("skillNameHashes");
         Map<String, Set<String>> bySkill = new TreeMap<>();
         for (SessionResult session : sessions) {
-            session.skillHashes.forEach((name, hash) ->
+            session.skillNameHashes.forEach((name, hash) ->
                     bySkill.computeIfAbsent(name, ignored -> new TreeSet<>()).add(hash));
         }
         bySkill.forEach((name, values) -> {
             ArrayNode list = hashes.putArray(name);
             values.forEach(list::add);
         });
+        ObjectNode lengths = result.putObject("skillContentLengths");
+        Map<String, Set<Long>> lengthsBySkill = new TreeMap<>();
+        for (SessionResult session : sessions) {
+            session.skillContentLengths.forEach((name, length) ->
+                    lengthsBySkill.computeIfAbsent(
+                            name, ignored -> new TreeSet<>()).add(length));
+        }
+        lengthsBySkill.forEach((name, values) -> {
+            ArrayNode list = lengths.putArray(name);
+            values.forEach(list::add);
+        });
+        result.set("skillContentVerification", readSkillContentVerification());
         ArrayNode skills = result.putArray("loadedSkills");
         sessions.stream().flatMap(session -> session.loadedSkills.stream())
                 .distinct().sorted().forEach(skills::add);
@@ -2211,6 +2258,21 @@ public class CampaignEvaluator {
                 .mapToInt(session -> session.remoteAgentCheckObservations).sum());
         result.put("testsSkippedMessages", sessions.stream()
                 .mapToInt(session -> session.testsSkippedMessages).sum());
+        int ciSkipped = sessions.stream()
+                .mapToInt(session -> session.ciTestsSkippedMessages).sum();
+        result.put("ciTestsSkippedMessages", ciSkipped);
+        ObjectNode execution = result.putObject("testExecution");
+        if (ciSkipped > 0) {
+            execution.put("availability", "measured");
+            execution.put("testsExecuted", false);
+            execution.put("testsRun", 0);
+            execution.put("source", "CI transcript log contains 'Tests are skipped.'");
+        } else {
+            execution.put("availability", "unavailable");
+            execution.putNull("testsExecuted");
+            execution.putNull("testsRun");
+            execution.put("reason", "No conclusive CI test execution evidence was found.");
+        }
         JsonNode baseline = repository.path("testIntegrity").path("baseline");
         if (baseline.has("testsRunByDefault")) {
             result.put("testsRunByDefault", baseline.path("testsRunByDefault").asBoolean());
@@ -2219,8 +2281,41 @@ public class CampaignEvaluator {
                             ? "compile_only_zero_tests_by_default"
                             : "tests_enabled_or_treatment_defined");
         } else {
-            result.putNull("testsRunByDefault");
-            result.put("controlCiInterpretation", "unavailable_without_repository");
+            if (ciSkipped > 0) {
+                result.put("testsRunByDefault", false);
+            } else {
+                result.putNull("testsRunByDefault");
+            }
+            result.put("controlCiInterpretation", ciSkipped > 0
+                    ? "compile_only_zero_tests_from_ci_log_evidence"
+                    : "unavailable_without_repository_or_ci_log_evidence");
+        }
+        return result;
+    }
+
+    private ObjectNode readSkillContentVerification() {
+        ObjectNode result = JSON.createObjectNode();
+        Path evidence = config.campaignDir.resolve(
+                "shepherd-task-skill-content-hashes.json");
+        if (!Files.isRegularFile(evidence)) {
+            result.put("status", "unverified");
+            result.put("availability", "unavailable");
+            result.put("expectedArtifact", evidence.getFileName().toString());
+            result.put("fallback",
+                    "Telemetry provides skill name hashes and content lengths only.");
+            return result;
+        }
+        try {
+            JsonNode artifact = JSON.readTree(evidence.toFile());
+            result.put("status", "verified");
+            result.put("availability", "measured");
+            result.put("artifact", evidence.getFileName().toString());
+            result.set("data", artifact);
+        } catch (IOException error) {
+            result.put("status", "invalid");
+            result.put("availability", "unavailable");
+            result.put("artifact", evidence.getFileName().toString());
+            result.put("reason", error.getMessage());
         }
         return result;
     }
@@ -2326,12 +2421,17 @@ public class CampaignEvaluator {
                 "schema_version", "evaluator_version", "evaluator_git_commit", "arm",
                 "campaign_id", "row_type", "task_issue", "pr_number",
                 "session_count", "recorded_session_seconds", "jsonl_session_ms",
-                "duration_source_difference_ms", "cca_wait_polls", "cca_wait_seconds",
+                "duration_source_difference_ms", "cca_wait_polls",
+                "cca_wait_elapsed_seconds", "cca_wait_ceiling_seconds",
                 "nonzero_tool_exits",
                 "review_rounds", "ccra_actionable_comments", "stage30_change_requests",
                 "product_defects", "flaky_test_failures", "leftover_state_failures",
                 "aiu", "premium_requests", "input_tokens", "cache_read_tokens",
                 "cache_write_tokens", "uncached_input_tokens", "output_tokens", "reasoning_tokens",
+                "product_code_events", "shepherd_harness_events",
+                "local_environment_events", "agent_tool_invocation_events",
+                "agent_authored_test_harness_events", "ci_runner_events",
+                "external_service_events",
                 "files_changed", "additions", "deletions", "test_tampering_meaningfulness");
         StringBuilder csv = new StringBuilder();
         csv.append(columns.stream().map(CampaignEvaluator::csv).collect(Collectors.joining(",")))
@@ -2390,8 +2490,11 @@ public class CampaignEvaluator {
                 - sessions.stream().mapToLong(value -> value.durationSeconds).sum() * 1000);
         row.put("cca_wait_polls",
                 sessions.stream().mapToInt(value -> value.ccaWaitPollCount).sum());
-        row.put("cca_wait_seconds",
-                sessions.stream().mapToLong(value -> value.ccaWaitSeconds).sum());
+        row.put("cca_wait_elapsed_seconds",
+                sessions.stream().mapToLong(value -> value.ccaWaitElapsedSeconds).sum());
+        row.put("cca_wait_ceiling_seconds",
+                sessions.stream().mapToLong(
+                        value -> value.ccaWaitConfiguredCeilingSeconds).sum());
         row.put("nonzero_tool_exits",
                 sessions.stream().mapToInt(value -> value.nonzeroToolExits).sum());
         row.put("review_rounds",
@@ -2426,6 +2529,15 @@ public class CampaignEvaluator {
                 tokens.input - tokens.cacheRead - tokens.cacheWrite);
         row.put("output_tokens", tokens.output);
         row.put("reasoning_tokens", tokens.reasoning);
+        for (String origin : List.of(
+                "product_code", "shepherd_harness", "local_environment",
+                "agent_tool_invocation", "agent_authored_test_harness",
+                "ci_runner", "external_service")) {
+            row.put(origin + "_events", events.stream()
+                    .filter(event -> issues.contains(event.path("taskIssue").asInt()))
+                    .filter(event -> origin.equals(event.path("classification")
+                            .path("origin").asText())).count());
+        }
     }
 
     private static Object nullableText(JsonNode node, String field) {
@@ -2509,10 +2621,38 @@ public class CampaignEvaluator {
                 .append(root.path("convergence").path("ccaWait").path("pollCount").asInt())
                 .append(" polls / ")
                 .append(formatDuration(root.path("convergence").path("ccaWait")
-                        .path("seconds").asLong())).append("\n")
+                        .path("elapsedSeconds").asLong())).append(" elapsed; ")
+                .append(formatDuration(root.path("convergence").path("ccaWait")
+                        .path("configuredPollCeilingSeconds").asLong()))
+                .append(" configured ceiling\n")
                 .append("- AIU: ").append(root.path("cost").path("aiu").path("value").asText()).append("\n")
                 .append("- Premium requests: ")
                 .append(root.path("cost").path("premiumRequests").path("value").asText()).append("\n");
+
+        report.append("\n## Evidence and run invariants\n\n")
+                .append("- CI tests run: ")
+                .append(root.path("ciAnalysis").path("testExecution")
+                        .path("testsRun").isNumber()
+                        ? root.path("ciAnalysis").path("testExecution")
+                                .path("testsRun").asText()
+                        : "unavailable")
+                .append(" (`")
+                .append(root.path("ciAnalysis").path("testExecution")
+                        .path("availability").asText("unavailable"))
+                .append("`)\n")
+                .append("- Partial output: ")
+                .append(root.path("evidenceQuality")
+                        .path("jsonlPartialOutputCrossCheck")
+                        .path("unicodeCodePointCount").asLong())
+                .append(" Unicode code points / ")
+                .append(root.path("evidenceQuality")
+                        .path("jsonlPartialOutputCrossCheck")
+                        .path("utf16CodeUnitCount").asLong())
+                .append(" UTF-16 code units\n")
+                .append("- Skill content verification: `")
+                .append(root.path("runInvariants").path("skillContentVerification")
+                        .path("status").asText("unverified"))
+                .append("`; telemetry hashes identify skill names, not content\n");
 
         report.append("\n## Post-mortem agent cost\n\n")
                 .append("- AIU: ")
@@ -2816,15 +2956,18 @@ public class CampaignEvaluator {
         final Map<String, Integer> eventTypeCounts = new TreeMap<>();
         final Map<String, String> partialOutputs = new HashMap<>();
         final Map<String, String> externalizedToolCalls = new LinkedHashMap<>();
-        final Map<String, String> skillHashes = new TreeMap<>();
+        final Map<String, String> skillNameHashes = new TreeMap<>();
+        final Map<String, Long> skillContentLengths = new TreeMap<>();
         String sessionId;
         Integer prNumber;
         Instant startedAt;
         long durationSeconds;
         long jsonlDurationMs;
-        long partialOutputCharacters;
+        long partialOutputUnicodeCodePoints;
+        long partialOutputUtf16CodeUnits;
         long reasoningDeltaCharacters;
-        long ccaWaitSeconds;
+        long ccaWaitElapsedSeconds;
+        long ccaWaitConfiguredCeilingSeconds;
         BigDecimal nanoAiu = BigDecimal.ZERO;
         int premiumRequests;
         int inferenceCalls;
@@ -2838,6 +2981,7 @@ public class CampaignEvaluator {
         int ccaWaitPollCount;
         int remoteAgentCheckObservations;
         int testsSkippedMessages;
+        int ciTestsSkippedMessages;
         int nonzeroToolExits;
         int jsonlParseErrors;
         int otelParseErrors;
@@ -2895,20 +3039,27 @@ public class CampaignEvaluator {
             value.put("externalizedOutputMarkers", externalOutputReferences);
             value.put("confirmedEvidenceGaps", confirmedEvidenceGaps);
             value.put("partialOutputEvents", partialOutputEvents);
-            value.put("partialOutputCharacters", partialOutputCharacters);
+            value.put("partialOutputUnicodeCodePoints",
+                    partialOutputUnicodeCodePoints);
+            value.put("partialOutputUtf16CodeUnits", partialOutputUtf16CodeUnits);
             value.put("reasoningDeltaEvents", reasoningDeltaEvents);
             value.put("reasoningDeltaCharacters", reasoningDeltaCharacters);
             value.put("toolExecutionCompleteSuccessTrue", toolSuccessTrue);
             value.put("toolExecutionCompleteSuccessFalse", toolSuccessFalse);
             value.put("toolSuccessIsShellFailureSignal", false);
             value.put("ccaWaitPollCount", ccaWaitPollCount);
-            value.put("ccaWaitSeconds", ccaWaitSeconds);
+            value.put("ccaWaitElapsedSeconds", ccaWaitElapsedSeconds);
+            value.put("ccaWaitConfiguredCeilingSeconds",
+                    ccaWaitConfiguredCeilingSeconds);
             value.put("remoteAgentCheckObservations", remoteAgentCheckObservations);
             value.put("testsSkippedMessages", testsSkippedMessages);
+            value.put("ciTestsSkippedMessages", ciTestsSkippedMessages);
             ArrayNode loaded = value.putArray("loadedSkills");
             loadedSkills.forEach(loaded::add);
-            ObjectNode hashes = value.putObject("skillContentHashes");
-            skillHashes.forEach(hashes::put);
+            ObjectNode hashes = value.putObject("skillNameHashes");
+            skillNameHashes.forEach(hashes::put);
+            ObjectNode lengths = value.putObject("skillContentLengths");
+            skillContentLengths.forEach(lengths::put);
             ArrayNode invocations = value.putArray("javaInvocations");
             javaInvocations.forEach(invocations::add);
             value.put("otelMonotonicityViolations", otelMonotonicityViolations);

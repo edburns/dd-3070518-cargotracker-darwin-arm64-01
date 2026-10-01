@@ -41,7 +41,7 @@ detached temporary Git worktrees and removes them after each operation.
   cross-check; completion `success` is never treated as the shell exit status.
 - JSONL supplies exact millisecond session duration alongside the
   second-truncated Markdown duration, usage, model/tool calls, loaded skills,
-  skill hashes, and reasoning-summary presence.
+  skill-name hashes, skill-content lengths, and reasoning-summary presence.
 - Large-session-output markers are reported separately from confirmed evidence
   gaps. A marker is a gap only when neither Markdown nor JSONL partial output
   preserves equivalent evidence.
@@ -59,12 +59,15 @@ detached temporary Git worktrees and removes them after each operation.
   flakiness. Detectable persisted-state contamination is separately labeled
   `leftover_state`.
 - Remote coding-agent wait polls are correlated to their originating
-  background shell and reported as a latency proxy. They are not presented as
-  remote-agent AIU or token cost.
+  background shell. Poll count, elapsed transcript time, and the configured
+  maximum wait ceiling are reported separately. Local runtime polls are
+  excluded, and none of these values is presented as remote-agent AIU or token
+  cost.
 - `Running Copilot cloud agent` is excluded from substantive CI checks and
   recorded as remote-agent orchestration.
 - Run invariants include Shepherd and Copilot CLI versions, model and reasoning
-  level, loaded-skill list, and invoked skill-content hashes.
+  level, loaded-skill list, skill-name hashes, and observed content lengths.
+  `skillNameHash` does not verify skill content.
 - Test-integrity changes are always measured from the selected arm's start
   SHA. A control baseline with tests skipped by default is labeled
   `not_meaningful`, not treated as tampering.
@@ -83,3 +86,25 @@ measured | derived | approximate | unavailable | not_applicable
 
 An unavailable value is represented as JSON `null` with a reason; it is never
 silently represented as zero.
+
+## Skill-content verification
+
+Before starting a counted campaign, hash the active Shepherd skill directories
+and write `shepherd-task-skill-content-hashes.json` next to the campaign
+manifest. For example:
+
+```sh
+find "$HOME/.copilot/skills" -type f -path '*/shepherd-task-*/*' -print0 |
+  sort -z |
+  xargs -0 shasum -a 256 > shepherd-task-skill-files.sha256
+```
+
+The JSON artifact should record the algorithm, capture time, and per-skill or
+per-file hashes. The evaluator preserves the artifact under
+`runInvariants.skillContentVerification`. If it is absent, as in the reference
+campaign, content identity is reported as unverified; telemetry content lengths
+remain available but are not treated as proof.
+
+`summary.csv` contains separate event-count columns for every classification
+origin so harness and local-environment events can be excluded when comparing
+arms.
