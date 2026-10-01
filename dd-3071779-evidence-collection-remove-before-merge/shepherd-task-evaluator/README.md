@@ -63,6 +63,9 @@ for explicit development runs and emits a report warning.
   Companion events emitted by one failed command share a problem ID.
 - `defects.csv` is the concatenable headline dataset, with one row per
   deduplicated product defect and its first detection, fix, and timing.
+- Defect timestamps prefer GitHub-reported times in command output, then
+  correlated JSONL tool-execution times, and use transcript offsets only as a
+  last resort. The selected source is recorded in `findings.json`.
 - Unit-test and Arquillian/container-test detection stages remain distinct.
 - A failed test that passes on an unchanged-head rerun is infrastructure
   flakiness. Detectable persisted-state contamination is separately labeled

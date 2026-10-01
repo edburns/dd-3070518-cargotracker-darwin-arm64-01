@@ -430,12 +430,20 @@ public class CampaignEvaluator {
                     }
                 } else if ("tool.execution_complete".equals(type)) {
                     result.toolCalls++;
+                    String completedAt = event.path("timestamp").asText("");
                     if (data.path("success").asBoolean()) {
                         result.toolSuccessTrue++;
                     } else {
                         result.toolSuccessFalse++;
                     }
                     String toolCallId = data.path("toolCallId").asText();
+                    String partial = result.partialOutputs.getOrDefault(toolCallId, "");
+                    Matcher reviewId = Pattern.compile(
+                            "(?m)^COPILOT_REVIEW_ID=(\\d+)").matcher(partial);
+                    if (reviewId.find() && !completedAt.isBlank()) {
+                        result.reviewCompletionTimestamps.put(
+                                reviewId.group(1), completedAt);
+                    }
                     JsonNode telemetry = data.path("toolTelemetry");
                     String skillName = telemetry.path("restrictedProperties")
                             .path("skillName").asText("");
@@ -973,8 +981,10 @@ public class CampaignEvaluator {
         event.put("relativeOffsetSeconds", block.relativeSeconds);
         if (session.startedAt == null) {
             event.putNull("timestamp");
+            event.put("timestampSource", "unavailable");
         } else {
             event.put("timestamp", session.startedAt.plusSeconds(block.relativeSeconds).toString());
+            event.put("timestampSource", "transcript_sub_offset");
         }
         if (block.headSha == null) {
             event.putNull("headSha");
@@ -1230,6 +1240,15 @@ public class CampaignEvaluator {
                         "ccra_review", null, classification);
                 event.put("reviewCommentId", commentId);
                 event.put("underlyingProblemId", "problem-review-" + commentId);
+                Matcher review = Pattern.compile(
+                        "--argjson\\s+review_id\\s+(\\d+)").matcher(block.command);
+                if (review.find()) {
+                    String timestamp = session.reviewCompletionTimestamps.get(review.group(1));
+                    if (timestamp != null) {
+                        event.put("timestamp", timestamp);
+                        event.put("timestampSource", "jsonl_tool_execution_complete");
+                    }
+                }
                 event.put("commandOrCheck", comment.path("path").asText("Copilot review"));
                 event.path("evidence").deepCopy();
                 ((ObjectNode) event.path("evidence")).put(
@@ -1260,6 +1279,21 @@ public class CampaignEvaluator {
                 Matcher pr = Pattern.compile("PR_NUMBER=(\\d+)").matcher(block.command);
                 if (pr.find()) {
                     event.put("prNumber", Integer.parseInt(pr.group(1)));
+                }
+                Matcher submitted = Pattern.compile(
+                        "REVIEW_SUBMITTED_AT=(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)")
+                        .matcher(block.output);
+                if (submitted.find()) {
+                    event.put("timestamp", submitted.group(1));
+                    event.put("timestampSource", "command_output_review_submitted_at");
+                }
+                Matcher finished = Pattern.compile(
+                        "LATEST_FINISH=(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)")
+                        .matcher(block.output);
+                if (finished.find()) {
+                    event.put("fixTimestampHint", finished.group(1));
+                    event.put("fixTimestampSourceHint",
+                            "command_output_copilot_work_finished");
                 }
                 ((ObjectNode) event.path("evidence")).put("excerpt", summary);
             }
@@ -1292,6 +1326,11 @@ public class CampaignEvaluator {
                                 "The stage-30 gate requested a substantive code or test change.");
                         ObjectNode event = addEvent(session, block, "stage_30_change_request",
                                 "stage_30_gate", null, classification);
+                        if (node.path("submitted_at").isTextual()) {
+                            event.put("timestamp", node.path("submitted_at").asText());
+                            event.put("timestampSource",
+                                    "github_review_submitted_at");
+                        }
                         ((ObjectNode) event.path("evidence")).put(
                                 "excerpt", excerpt(node.path("body").asText(), 1200));
                     }
@@ -1339,20 +1378,30 @@ public class CampaignEvaluator {
                 if (task != null && task.gitTask != null) {
                     resolution.put("status", "fixed");
                     resolution.put("headSha", task.gitTask.headSha);
-                    long offset = event.path("relativeOffsetSeconds").asLong();
-                    sessions.stream()
-                            .filter(session -> session.issue == issue)
-                            .filter(session -> session.shepherdStage
-                                    == event.path("shepherdStage").asInt())
-                            .flatMap(session -> session.toolBlocks.stream()
-                                    .map(block -> Map.entry(session, block)))
-                            .filter(entry -> entry.getValue().relativeSeconds > offset)
-                            .filter(entry -> task.gitTask.headSha.equals(
-                                    entry.getValue().headSha))
-                            .findFirst()
-                            .ifPresent(entry -> resolution.put("timestamp",
-                                    entry.getKey().startedAt.plusSeconds(
-                                            entry.getValue().relativeSeconds).toString()));
+                    if (event.path("fixTimestampHint").isTextual()) {
+                        resolution.put("timestamp", event.path("fixTimestampHint").asText());
+                        resolution.put("timestampSource",
+                                event.path("fixTimestampSourceHint").asText());
+                    } else {
+                        long offset = event.path("relativeOffsetSeconds").asLong();
+                        sessions.stream()
+                                .filter(session -> session.issue == issue)
+                                .filter(session -> session.shepherdStage
+                                        == event.path("shepherdStage").asInt())
+                                .flatMap(session -> session.toolBlocks.stream()
+                                        .map(block -> Map.entry(session, block)))
+                                .filter(entry -> entry.getValue().relativeSeconds > offset)
+                                .filter(entry -> task.gitTask.headSha.equals(
+                                        entry.getValue().headSha))
+                                .findFirst()
+                                .ifPresent(entry -> {
+                                    resolution.put("timestamp",
+                                            entry.getKey().startedAt.plusSeconds(
+                                                    entry.getValue().relativeSeconds).toString());
+                                    resolution.put("timestampSource",
+                                            "transcript_sub_offset");
+                                });
+                    }
                     resolution.put("summary",
                             "The task's final PR head contains the accepted remediation.");
                     continue;
@@ -1537,6 +1586,8 @@ public class CampaignEvaluator {
                 first.put("shepherdStage", event.path("shepherdStage").asInt());
                 first.put("detectionGate", event.path("detectionGate").asText());
                 copyNullable(event, first, "timestamp");
+                first.put("timestampSource",
+                        event.path("timestampSource").asText("unavailable"));
                 copyNullable(event, first, "headSha");
                 defect.putArray("occurrenceEventIds");
                 ObjectNode resolution = defect.putObject("resolution");
@@ -1550,6 +1601,9 @@ public class CampaignEvaluator {
                             : gitCommitTime(commit);
                     if (fixedAt != null) {
                         resolution.put("fixedAt", fixedAt.toString());
+                        resolution.put("timestampSource",
+                                event.path("resolution").path("timestampSource")
+                                        .asText("git_commit_timestamp"));
                         if (event.path("timestamp").isTextual()) {
                             resolution.put("timeToFixSeconds", Math.max(0,
                                     Duration.between(Instant.parse(event.path("timestamp").asText()),
@@ -3404,6 +3458,7 @@ public class CampaignEvaluator {
         final List<ObjectNode> javaInvocations = new ArrayList<>();
         final Map<String, Integer> eventTypeCounts = new TreeMap<>();
         final Map<String, String> partialOutputs = new HashMap<>();
+        final Map<String, String> reviewCompletionTimestamps = new HashMap<>();
         final Map<String, String> externalizedToolCalls = new LinkedHashMap<>();
         final Map<String, String> skillNameHashes = new TreeMap<>();
         final Map<String, Long> skillContentLengths = new TreeMap<>();
