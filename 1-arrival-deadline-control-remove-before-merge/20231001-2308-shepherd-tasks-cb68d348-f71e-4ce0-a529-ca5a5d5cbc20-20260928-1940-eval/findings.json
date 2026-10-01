@@ -1,0 +1,3518 @@
+{
+  "schemaVersion" : "1.2",
+  "evaluator" : {
+    "name" : "shepherd-task-evaluator",
+    "version" : "0.3.0",
+    "gitCommit" : "22d518631175e2d3833bfb2ad53382241ac3e16b",
+    "worktreeDirty" : false,
+    "sourceDirectory" : "/Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/dd-3071779-evidence-collection-remove-before-merge/shepherd-task-evaluator",
+    "generatedAt" : "2026-10-01T21:24:26.752950Z",
+    "platform" : "Mac OS X-aarch64",
+    "invocation" : [ "--evaluator-dir", "/Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/dd-3071779-evidence-collection-remove-before-merge/shepherd-task-evaluator", "1-arrival-deadline-control-remove-before-merge/shepherd-tasks-cb68d348-f71e-4ce0-a529-ca5a5d5cbc20-20260928-1940", "--arm", "control", "--repo", ".", "--with-build" ],
+    "arm" : "control"
+  },
+  "campaign" : {
+    "arm" : "control",
+    "campaignId" : "cb68d348-f71e-4ce0-a529-ca5a5d5cbc20",
+    "campaignDirectory" : "/Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/1-arrival-deadline-control-remove-before-merge/shepherd-tasks-cb68d348-f71e-4ce0-a529-ca5a5d5cbc20-20260928-1940",
+    "repository" : "edburns/dd-3070518-cargotracker-darwin-arm64-01",
+    "baseBranch" : "experiment/shepherd-control",
+    "lessonPropagation" : "off",
+    "taskIssues" : [ 2, 3, 4, 5, 6 ],
+    "startedAt" : "2026-09-28T23:40:08Z",
+    "completedAt" : "2026-09-29T02:14:08Z",
+    "status" : "succeeded",
+    "exitCode" : 0,
+    "wallTimeSeconds" : 9240,
+    "recordedSessionTimeSeconds" : 7806,
+    "jsonlSessionTimeMs" : 7809160,
+    "durationSourceDifferenceMs" : 3160,
+    "primarySessionDurationSource" : "markdown_header_truncated_seconds",
+    "transcriptTimestampConversionMethod" : "Local header timestamps are converted with the UTC offset that best aligns the header start with the first JSONL timestamp.",
+    "orchestrationOverheadSeconds" : 1434,
+    "evaluatorVersion" : "0.3.0",
+    "evaluatorGitCommit" : "22d518631175e2d3833bfb2ad53382241ac3e16b"
+  },
+  "evidenceQuality" : {
+    "phaseSessionCount" : 10,
+    "missingExpectedArtifacts" : [ ],
+    "externalizedOutputMarkers" : [ {
+      "taskIssue" : 2,
+      "shepherdStage" : 30,
+      "count" : 1,
+      "confirmedEvidenceGaps" : 0,
+      "interpretation" : "Output was preserved by Markdown or JSONL partial-output evidence."
+    }, {
+      "taskIssue" : 3,
+      "shepherdStage" : 30,
+      "count" : 1,
+      "confirmedEvidenceGaps" : 0,
+      "interpretation" : "Output was preserved by Markdown or JSONL partial-output evidence."
+    }, {
+      "taskIssue" : 4,
+      "shepherdStage" : 30,
+      "count" : 1,
+      "confirmedEvidenceGaps" : 0,
+      "interpretation" : "Output was preserved by Markdown or JSONL partial-output evidence."
+    }, {
+      "taskIssue" : 5,
+      "shepherdStage" : 30,
+      "count" : 1,
+      "confirmedEvidenceGaps" : 0,
+      "interpretation" : "Output was preserved by Markdown or JSONL partial-output evidence."
+    }, {
+      "taskIssue" : 6,
+      "shepherdStage" : 30,
+      "count" : 1,
+      "confirmedEvidenceGaps" : 0,
+      "interpretation" : "Output was preserved by Markdown or JSONL partial-output evidence."
+    } ],
+    "confirmedEvidenceGapCount" : 0,
+    "jsonlPartialOutputCrossCheck" : {
+      "eventCount" : 785,
+      "unicodeCodePointCount" : 1692406,
+      "utf16CodeUnitCount" : 1692410,
+      "primaryCharacterUnit" : "Unicode code points",
+      "failureEventsCorroborated" : 21
+    },
+    "reasoningSummaryPresence" : {
+      "eventCount" : 5796,
+      "characterCount" : 30026,
+      "usedForClassification" : false
+    },
+    "limitations" : [ {
+      "code" : "REMOTE_AGENT_TELEMETRY_UNAVAILABLE",
+      "description" : "CCA and CCRA internal token, tool, and model telemetry is not present."
+    }, {
+      "code" : "JSONL_COMPLETE_RESULTS_REDACTED_PARTIALS_AVAILABLE",
+      "description" : "Completed tool results are redacted, but partial-result events provide a secondary raw-output source."
+    } ]
+  },
+  "sessions" : [ {
+    "taskIssue" : 2,
+    "shepherdStage" : 30,
+    "sessionId" : "23158692-6edd-475e-9b01-d3d30d976db3",
+    "transcript" : "phase1-task-20260928-194010-2.md",
+    "jsonl" : "phase1-task-20260928-194010-2.jsonl",
+    "otel" : "phase1-otel-20260928-194010-2.jsonl",
+    "prNumber" : null,
+    "startedAt" : "2026-09-28T23:40:12Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 423,
+    "jsonlDurationMs" : 423126,
+    "aiu" : {
+      "value" : 75.328,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 699095,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 12078,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 648630,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 50408,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 1858,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 57,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 19,
+    "toolCalls" : 31,
+    "nonzeroToolExits" : 3,
+    "externalizedOutputMarkers" : 1,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 82,
+    "partialOutputUnicodeCodePoints" : 123541,
+    "partialOutputUtf16CodeUnits" : 123541,
+    "reasoningDeltaEvents" : 875,
+    "reasoningDeltaCharacters" : 4355,
+    "toolExecutionCompleteSuccessTrue" : 31,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 1,
+    "testsSkippedMessages" : 2,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-30-from-assignment-to-ready" : "fbbe9ff2b50b3d9ff07cc3ee1f70a821b5ede177540547826ee1daccefd15c0f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-30-from-assignment-to-ready" : 25804,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ {
+      "line" : 784,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    } ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ "event-0013", "event-0014", "event-0015" ]
+  }, {
+    "taskIssue" : 2,
+    "shepherdStage" : 40,
+    "sessionId" : "55c1bf84-b3fb-4e29-baec-f6bf7dc6ba57",
+    "transcript" : "phase2-task-20260928-194749-2.md",
+    "jsonl" : "phase2-task-20260928-194749-2.jsonl",
+    "otel" : "phase2-otel-20260928-194749-2.jsonl",
+    "prNumber" : 7,
+    "startedAt" : "2026-09-28T23:47:50Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 152,
+    "jsonlDurationMs" : 152304,
+    "aiu" : {
+      "value" : 32.31192,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 231342,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 3852,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 197958,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 33360,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 521,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 24,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 8,
+    "toolCalls" : 10,
+    "nonzeroToolExits" : 0,
+    "externalizedOutputMarkers" : 0,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 19,
+    "partialOutputUnicodeCodePoints" : 9412,
+    "partialOutputUtf16CodeUnits" : 9416,
+    "reasoningDeltaEvents" : 431,
+    "reasoningDeltaCharacters" : 2183,
+    "toolExecutionCompleteSuccessTrue" : 10,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 0,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : "389092470a5d503c169008dad0087ab6a0636e9ebbed84bf61fc03028754223f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : 18417,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ ]
+  }, {
+    "taskIssue" : 3,
+    "shepherdStage" : 30,
+    "sessionId" : "c9f4cee0-fc22-4ffb-9dc4-04ec8976c188",
+    "transcript" : "phase1-task-20260928-195108-3.md",
+    "jsonl" : "phase1-task-20260928-195108-3.jsonl",
+    "otel" : "phase1-otel-20260928-195108-3.jsonl",
+    "prNumber" : null,
+    "startedAt" : "2026-09-28T23:51:09Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 715,
+    "jsonlDurationMs" : 715131,
+    "aiu" : {
+      "value" : 102.87324,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 941264,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 17743,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 876606,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 64598,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 4145,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 60,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 20,
+    "toolCalls" : 38,
+    "nonzeroToolExits" : 1,
+    "externalizedOutputMarkers" : 1,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 116,
+    "partialOutputUnicodeCodePoints" : 231846,
+    "partialOutputUtf16CodeUnits" : 231846,
+    "reasoningDeltaEvents" : 428,
+    "reasoningDeltaCharacters" : 2298,
+    "toolExecutionCompleteSuccessTrue" : 38,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 1,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-30-from-assignment-to-ready" : "fbbe9ff2b50b3d9ff07cc3ee1f70a821b5ede177540547826ee1daccefd15c0f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-30-from-assignment-to-ready" : 25804,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ {
+      "line" : 1202,
+      "executable" : "java",
+      "javaHome" : null,
+      "availability" : "unavailable"
+    }, {
+      "line" : 1236,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    }, {
+      "line" : 1336,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    } ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ "event-0007", "event-0008" ]
+  }, {
+    "taskIssue" : 3,
+    "shepherdStage" : 40,
+    "sessionId" : "77b0d686-a834-48c7-8ee0-7cfc0e7d6d15",
+    "transcript" : "phase2-task-20260928-200421-3.md",
+    "jsonl" : "phase2-task-20260928-200421-3.jsonl",
+    "otel" : "phase2-otel-20260928-200421-3.jsonl",
+    "prNumber" : 8,
+    "startedAt" : "2026-09-29T00:04:22Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 164,
+    "jsonlDurationMs" : 164284,
+    "aiu" : {
+      "value" : 34.07374,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 232761,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 4633,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 199066,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 33671,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 523,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 24,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 8,
+    "toolCalls" : 10,
+    "nonzeroToolExits" : 0,
+    "externalizedOutputMarkers" : 0,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 17,
+    "partialOutputUnicodeCodePoints" : 6540,
+    "partialOutputUtf16CodeUnits" : 6540,
+    "reasoningDeltaEvents" : 246,
+    "reasoningDeltaCharacters" : 1335,
+    "toolExecutionCompleteSuccessTrue" : 10,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 0,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : "389092470a5d503c169008dad0087ab6a0636e9ebbed84bf61fc03028754223f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : 18417,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ ]
+  }, {
+    "taskIssue" : 4,
+    "shepherdStage" : 30,
+    "sessionId" : "7b849cde-247c-450d-bc9c-131ca9519e55",
+    "transcript" : "phase1-task-20260928-200830-4.md",
+    "jsonl" : "phase1-task-20260928-200830-4.jsonl",
+    "otel" : "phase1-otel-20260928-200830-4.jsonl",
+    "prNumber" : null,
+    "startedAt" : "2026-09-29T00:08:31Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 620,
+    "jsonlDurationMs" : 620727,
+    "aiu" : {
+      "value" : 88.86578,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 905499,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 13325,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 848972,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 56461,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 2301,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 66,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 22,
+    "toolCalls" : 37,
+    "nonzeroToolExits" : 3,
+    "externalizedOutputMarkers" : 1,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 98,
+    "partialOutputUnicodeCodePoints" : 166322,
+    "partialOutputUtf16CodeUnits" : 166322,
+    "reasoningDeltaEvents" : 641,
+    "reasoningDeltaCharacters" : 3252,
+    "toolExecutionCompleteSuccessTrue" : 37,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 1,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-30-from-assignment-to-ready" : "fbbe9ff2b50b3d9ff07cc3ee1f70a821b5ede177540547826ee1daccefd15c0f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-30-from-assignment-to-ready" : 25804,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ {
+      "line" : 741,
+      "executable" : "java",
+      "javaHome" : null,
+      "availability" : "unavailable"
+    }, {
+      "line" : 871,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    }, {
+      "line" : 1174,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    } ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ "event-0010", "event-0011", "event-0012" ]
+  }, {
+    "taskIssue" : 4,
+    "shepherdStage" : 40,
+    "sessionId" : "8fe36bb3-7760-4d91-a00e-7fb7070a17a2",
+    "transcript" : "phase2-task-20260928-202051-4.md",
+    "jsonl" : "phase2-task-20260928-202051-4.jsonl",
+    "otel" : "phase2-otel-20260928-202051-4.jsonl",
+    "prNumber" : 9,
+    "startedAt" : "2026-09-29T00:20:54Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 198,
+    "jsonlDurationMs" : 198624,
+    "aiu" : {
+      "value" : 37.02926,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 235710,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 5802,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 200929,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 34757,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 940,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 24,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 8,
+    "toolCalls" : 10,
+    "nonzeroToolExits" : 0,
+    "externalizedOutputMarkers" : 0,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 17,
+    "partialOutputUnicodeCodePoints" : 6011,
+    "partialOutputUtf16CodeUnits" : 6011,
+    "reasoningDeltaEvents" : 0,
+    "reasoningDeltaCharacters" : 0,
+    "toolExecutionCompleteSuccessTrue" : 10,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 0,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : "389092470a5d503c169008dad0087ab6a0636e9ebbed84bf61fc03028754223f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : 18417,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ ]
+  }, {
+    "taskIssue" : 5,
+    "shepherdStage" : 30,
+    "sessionId" : "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d",
+    "transcript" : "phase1-task-20260928-202616-5.md",
+    "jsonl" : "phase1-task-20260928-202616-5.jsonl",
+    "otel" : "phase1-otel-20260928-202616-5.jsonl",
+    "prNumber" : null,
+    "startedAt" : "2026-09-29T00:26:17Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 808,
+    "jsonlDurationMs" : 808328,
+    "aiu" : {
+      "value" : 126.55302,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 1470043,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 16263,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 1393448,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 76511,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 4833,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 84,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 28,
+    "toolCalls" : 42,
+    "nonzeroToolExits" : 4,
+    "externalizedOutputMarkers" : 1,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 164,
+    "partialOutputUnicodeCodePoints" : 566166,
+    "partialOutputUtf16CodeUnits" : 566166,
+    "reasoningDeltaEvents" : 1038,
+    "reasoningDeltaCharacters" : 5466,
+    "toolExecutionCompleteSuccessTrue" : 42,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 1,
+    "ciTestsSkippedMessages" : 1,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-30-from-assignment-to-ready" : "fbbe9ff2b50b3d9ff07cc3ee1f70a821b5ede177540547826ee1daccefd15c0f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-30-from-assignment-to-ready" : 25804,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ {
+      "line" : 2172,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    }, {
+      "line" : 2538,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    } ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ "event-0016", "event-0017", "event-0018", "event-0019", "event-0020" ]
+  }, {
+    "taskIssue" : 5,
+    "shepherdStage" : 40,
+    "sessionId" : "b1d8e363-6678-4eb2-a0f8-7aa8699647d4",
+    "transcript" : "phase2-task-20260928-204225-5.md",
+    "jsonl" : "phase2-task-20260928-204225-5.jsonl",
+    "otel" : "phase2-otel-20260928-204225-5.jsonl",
+    "prNumber" : 10,
+    "startedAt" : "2026-09-29T00:42:27Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 600,
+    "jsonlDurationMs" : 600324,
+    "aiu" : {
+      "value" : 77.1542,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 872347,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 9655,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 822440,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 49838,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 1227,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 69,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 23,
+    "toolCalls" : 31,
+    "nonzeroToolExits" : 1,
+    "externalizedOutputMarkers" : 0,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 66,
+    "partialOutputUnicodeCodePoints" : 79577,
+    "partialOutputUtf16CodeUnits" : 79577,
+    "reasoningDeltaEvents" : 1158,
+    "reasoningDeltaCharacters" : 6043,
+    "toolExecutionCompleteSuccessTrue" : 31,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 0,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : "389092470a5d503c169008dad0087ab6a0636e9ebbed84bf61fc03028754223f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : 18417,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ {
+      "line" : 985,
+      "executable" : "mvn",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home",
+      "availability" : "measured"
+    } ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ "event-0021", "event-0022", "event-0023", "event-0024" ]
+  }, {
+    "taskIssue" : 6,
+    "shepherdStage" : 30,
+    "sessionId" : "51992c93-8b5e-443a-8aa4-aa8dfbe34233",
+    "transcript" : "phase1-task-20260928-205544-6.md",
+    "jsonl" : "phase1-task-20260928-205544-6.jsonl",
+    "otel" : "phase1-otel-20260928-205544-6.jsonl",
+    "prNumber" : null,
+    "startedAt" : "2026-09-29T00:55:47Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 3962,
+    "jsonlDurationMs" : 3962024,
+    "aiu" : {
+      "value" : 174.40154,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 2288490,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 13768,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 2168181,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 120147,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 2017,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 162,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 54,
+    "toolCalls" : 80,
+    "nonzeroToolExits" : 5,
+    "externalizedOutputMarkers" : 1,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 189,
+    "partialOutputUnicodeCodePoints" : 498633,
+    "partialOutputUtf16CodeUnits" : 498633,
+    "reasoningDeltaEvents" : 733,
+    "reasoningDeltaCharacters" : 3847,
+    "toolExecutionCompleteSuccessTrue" : 80,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 17,
+    "ccaWaitElapsedSeconds" : 2958,
+    "ccaWaitConfiguredCeilingSeconds" : 3060,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 1,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-30-from-assignment-to-ready" : "fbbe9ff2b50b3d9ff07cc3ee1f70a821b5ede177540547826ee1daccefd15c0f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-30-from-assignment-to-ready" : 25804,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ {
+      "line" : 1169,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    }, {
+      "line" : 2449,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    }, {
+      "line" : 2508,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    }, {
+      "line" : 2559,
+      "executable" : "./mvnw",
+      "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+      "availability" : "measured"
+    } ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ "event-0001", "event-0002", "event-0003", "event-0004", "event-0005", "event-0006" ]
+  }, {
+    "taskIssue" : 6,
+    "shepherdStage" : 40,
+    "sessionId" : "1afcc786-9f86-4ae0-9717-bb9817f28ed6",
+    "transcript" : "phase2-task-20260928-220613-6.md",
+    "jsonl" : "phase2-task-20260928-220613-6.jsonl",
+    "otel" : "phase2-otel-20260928-220613-6.jsonl",
+    "prNumber" : 11,
+    "startedAt" : "2026-09-29T02:06:17Z",
+    "timestampConversionMethod" : "local_header_zone_offset_calibrated_to_first_jsonl_timestamp",
+    "durationSeconds" : 164,
+    "jsonlDurationMs" : 164288,
+    "aiu" : {
+      "value" : 38.16374,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Final session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 266604,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 5766,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 231886,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 34691,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 554,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 27,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : 9,
+    "toolCalls" : 10,
+    "nonzeroToolExits" : 1,
+    "externalizedOutputMarkers" : 0,
+    "confirmedEvidenceGaps" : 0,
+    "partialOutputEvents" : 17,
+    "partialOutputUnicodeCodePoints" : 4358,
+    "partialOutputUtf16CodeUnits" : 4358,
+    "reasoningDeltaEvents" : 246,
+    "reasoningDeltaCharacters" : 1247,
+    "toolExecutionCompleteSuccessTrue" : 10,
+    "toolExecutionCompleteSuccessFalse" : 0,
+    "toolSuccessIsShellFailureSignal" : false,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "remoteAgentCheckObservations" : 0,
+    "testsSkippedMessages" : 0,
+    "ciTestsSkippedMessages" : 0,
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "skillNameHashes" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : "389092470a5d503c169008dad0087ab6a0636e9ebbed84bf61fc03028754223f",
+      "shepherd-task-approve-workflows-and-wait-for-completion" : "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b"
+    },
+    "skillContentLengths" : {
+      "shepherd-task-40-from-ready-to-merged-to-base" : 18417,
+      "shepherd-task-approve-workflows-and-wait-for-completion" : 4423
+    },
+    "javaInvocations" : [ ],
+    "otelMonotonicityViolations" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0,
+    "eventIds" : [ "event-0009" ]
+  } ],
+  "tasks" : [ {
+    "taskIssue" : 2,
+    "prNumber" : 7,
+    "sessionCount" : 2,
+    "recordedSessionTimeSeconds" : 575,
+    "jsonlSessionTimeMs" : 575430,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "nonzeroToolExits" : 3,
+    "reviewRounds" : 1,
+    "ccraActionableComments" : 0,
+    "stage30ChangeRequests" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0
+  }, {
+    "taskIssue" : 3,
+    "prNumber" : 8,
+    "sessionCount" : 2,
+    "recordedSessionTimeSeconds" : 879,
+    "jsonlSessionTimeMs" : 879415,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "nonzeroToolExits" : 1,
+    "reviewRounds" : 1,
+    "ccraActionableComments" : 0,
+    "stage30ChangeRequests" : 1,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0
+  }, {
+    "taskIssue" : 4,
+    "prNumber" : 9,
+    "sessionCount" : 2,
+    "recordedSessionTimeSeconds" : 818,
+    "jsonlSessionTimeMs" : 819351,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "nonzeroToolExits" : 3,
+    "reviewRounds" : 1,
+    "ccraActionableComments" : 0,
+    "stage30ChangeRequests" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0
+  }, {
+    "taskIssue" : 5,
+    "prNumber" : 10,
+    "sessionCount" : 2,
+    "recordedSessionTimeSeconds" : 1408,
+    "jsonlSessionTimeMs" : 1408652,
+    "ccaWaitPollCount" : 0,
+    "ccaWaitElapsedSeconds" : 0,
+    "ccaWaitConfiguredCeilingSeconds" : 0,
+    "nonzeroToolExits" : 5,
+    "reviewRounds" : 2,
+    "ccraActionableComments" : 2,
+    "stage30ChangeRequests" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0
+  }, {
+    "taskIssue" : 6,
+    "prNumber" : 11,
+    "sessionCount" : 2,
+    "recordedSessionTimeSeconds" : 4126,
+    "jsonlSessionTimeMs" : 4126312,
+    "ccaWaitPollCount" : 17,
+    "ccaWaitElapsedSeconds" : 2958,
+    "ccaWaitConfiguredCeilingSeconds" : 3060,
+    "nonzeroToolExits" : 6,
+    "reviewRounds" : 1,
+    "ccraActionableComments" : 0,
+    "stage30ChangeRequests" : 0,
+    "flakyTestFailures" : 0,
+    "flakyUnitTestFailures" : 0,
+    "flakyArquillianContainerTestFailures" : 0,
+    "leftoverStateFailures" : 0
+  } ],
+  "failureEvents" : [ {
+    "id" : "event-0013",
+    "taskIssue" : 2,
+    "prNumber" : null,
+    "sessionId" : "23158692-6edd-475e-9b01-d3d30d976db3",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 19,
+    "timestamp" : "2026-09-28T23:40:31Z",
+    "headSha" : null,
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; gh api repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/git/trees/experiment/shepherd-control -f recursive=1 --jq '.tree[] | select(.path | contains(\"1-arrival-deadline-control-remove-before-merge\")) | [.type,.path] | @tsv'",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-194010-2.md",
+      "lineStart" : 340,
+      "lineEnd" : 362,
+      "excerpt" : "<details>\n<summary>7 lines</summary>\n\n```\ngh: Not Found (HTTP 404)\n{\n  \"message\": \"Not Found\",\n  \"documentation_url\": \"https://docs.github.com/rest\",\n  \"status\": \"404\"\n}\n<shellId: 2 completed with exit code 1>\n```\n\n</details>",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "missing_campaign_metadata",
+      "origin" : "shepherd_harness",
+      "ruleId" : "INVALID_REMOTE_RESOURCE_LOOKUP",
+      "explanation" : "The command requested a repository resource or encoded payload that did not exist."
+    },
+    "underlyingProblemId" : "problem-2-30-340",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0014",
+    "taskIssue" : 2,
+    "prNumber" : null,
+    "sessionId" : "23158692-6edd-475e-9b01-d3d30d976db3",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 22,
+    "timestamp" : "2026-09-28T23:40:34Z",
+    "headSha" : null,
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; gh api repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/git/trees/9deec1b5cbdf1666df1323473b3ca0f06ca2cfce -f recursive=1 --jq '.tree[] | select(.path | contains(\"1-arrival-deadline-control-remove-before-merge\")) | [.type,.pa\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-194010-2.md",
+      "lineStart" : 383,
+      "lineEnd" : 405,
+      "excerpt" : "<details>\n<summary>7 lines</summary>\n\n```\ngh: Not Found (HTTP 404)\n{\n  \"message\": \"Not Found\",\n  \"documentation_url\": \"https://docs.github.com/rest\",\n  \"status\": \"404\"\n}\n<shellId: 3 completed with exit code 1>\n```\n\n</details>",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "missing_campaign_metadata",
+      "origin" : "shepherd_harness",
+      "ruleId" : "INVALID_REMOTE_RESOURCE_LOOKUP",
+      "explanation" : "The command requested a repository resource or encoded payload that did not exist."
+    },
+    "underlyingProblemId" : "problem-2-30-383",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0015",
+    "taskIssue" : 2,
+    "prNumber" : null,
+    "sessionId" : "23158692-6edd-475e-9b01-d3d30d976db3",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 384,
+    "timestamp" : "2026-09-28T23:46:36Z",
+    "headSha" : "702ee54ca1fa603560d54b86e29b654151869a77",
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; gh api 'repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/commits/702ee54ca1fa603560d54b86e29b654151869a77/check-runs?per_page=100' --paginate --slurp --jq '[.[].check_runs[] | {name,status,conclusion,head_sha,details_url}]'",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-194010-2.md",
+      "lineStart" : 890,
+      "lineEnd" : 1083,
+      "excerpt" : "<details>\n<summary>145 lines</summary>\n\n```\nthe `--slurp` option is not supported with `--jq` or `--template`\n\nMakes an authenticated HTTP request to the GitHub API and prints the response.\n\nThe endpoint argument should either be a path of a GitHub API v3 endpoint, or\n`graphql` to access the GitHub API v4.\n\nPlaceholder values `{owner}`, `{repo}`, and `{branch}` in the endpoint\nargument will get replaced with values from the repository of the current\ndirectory or the repository specified in the `GH_REPO` environment variable.\nNote that in some shells, for example PowerShell, you may need to enclose\nany value that contains `{...}` in quotes to prevent the shell from\napplying special meaning to curly braces.\n\nThe `-p/--preview` flag enables opting into previews, which are feature-flagged,\nexperimental API endpoints or behaviors. The API expects opt-in via the `Accept`\nheader with format `application/vnd.github.<preview-name>-preview+json` and this\ncommand facilitates that via `--preview <preview-name>`. To send a request for\nthe corsair and scarlet witch previews, you could use `-p corsair,scarlet-witch`\nor `--preview corsair --preview scarlet-witch`.\n\nThe default HTTP request method \n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "malformed_invocation",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "INVALID_TOOL_INVOCATION",
+      "explanation" : "The failure is caused by the agent's command or execution context."
+    },
+    "underlyingProblemId" : "problem-2-30-890",
+    "recurrenceSignature" : "gh_api_slurp_with_jq",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0007",
+    "taskIssue" : 3,
+    "prNumber" : 8,
+    "sessionId" : "c9f4cee0-fc22-4ffb-9dc4-04ec8976c188",
+    "shepherdStage" : 30,
+    "eventKind" : "stage_30_change_request",
+    "relativeOffsetSeconds" : 539,
+    "timestamp" : "2026-09-29T00:00:08Z",
+    "headSha" : "f473d94d9e1011f19488038d7f7326b320ad5022",
+    "detectionGate" : "stage_30_gate",
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; REPO='edburns/dd-3070518-cargotracker-darwin-arm64-01'; TASK_ISSUE=3; BASE_BRANCH='experiment/shepherd-control'; PR_NUMBER=8; CURRENT_SHA='f473d94d9e1011f19488038d7f7326b320ad5022'; REVIEW_BODY='@copilot Please fix the following i\n…",
+    "exitCode" : null,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-195108-3.md",
+      "lineStart" : 856,
+      "lineEnd" : 908,
+      "excerpt" : "Missing facade test: Add `src/test/java/org/eclipse/cargotracker/interfaces/booking/facade/internal/DefaultBookingServiceFacadeTest.java` without new dependencies. Prove that `changeDeadline` converts the tracking string to an equivalent `TrackingId`, passes the same `Date` instance/value, delegates exactly once, and performs no repository work. Keep the task 1 application test unchanged.",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "product_defect",
+      "subtype" : "completeness_gap",
+      "origin" : "product_code",
+      "ruleId" : "STAGE_30_CHANGE_REQUEST",
+      "explanation" : "The stage-30 gate requested a substantive code or test change."
+    },
+    "underlyingProblemId" : "problem-3-30-856",
+    "recurrenceSignature" : "stage_30_change_request",
+    "resolution" : {
+      "status" : "fixed",
+      "timestamp" : "2026-09-29T00:00:19Z",
+      "headSha" : "db3827c4c49282e36ed3a56970fb2052f0dfe695",
+      "summary" : "The task's final PR head contains the accepted remediation."
+    }
+  }, {
+    "id" : "event-0008",
+    "taskIssue" : 3,
+    "prNumber" : null,
+    "sessionId" : "c9f4cee0-fc22-4ffb-9dc4-04ec8976c188",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 676,
+    "timestamp" : "2026-09-29T00:02:25Z",
+    "headSha" : "db3827c4c49282e36ed3a56970fb2052f0dfe695",
+    "detectionGate" : null,
+    "activity" : "github_pr_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; gh pr view 8 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --comments --json comments --jq '.comments[] | select(.author.login | test(\"bot|copilot|agent\"; \"i\")) | {author:.author.login,body:.body,url:.url}'",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-195108-3.md",
+      "lineStart" : 1435,
+      "lineEnd" : 1491,
+      "excerpt" : "<details>\n<summary>32 lines</summary>\n\n```\nspecify only one of --comments or --json\n\nDisplay the title, body, and other information about a pull request.\n\nWithout an argument, the pull request that belongs to the current branch\nis displayed.\n\nWith `--web` flag, open the pull request in a web browser instead.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh pr view [<number> | <url> | <branch>] [flags]\n\nFLAGS\n  -c, --comments          View pull request comments\n  -q, --jq expression     Filter JSON output using a jq expression\n      --json fields       Output JSON with the specified fields\n  -t, --template string   Format JSON output using a Go template; see \"gh help formatting\"\n  -w, --web               Open a pull request in the browser\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nJSON FIELDS\n  additions, assignees, author, autoMergeRequest, baseRefName, baseRefOid, body,\n  changedFiles, closed, closedAt, closingIssuesReferences, comments, commits,\n  createdAt, deletions, files, fullDatabaseId, headRefName, headRefOid,\n\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "malformed_invocation",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "INVALID_TOOL_INVOCATION",
+      "explanation" : "The failure is caused by the agent's command or execution context."
+    },
+    "underlyingProblemId" : "problem-3-30-1435",
+    "recurrenceSignature" : "gh_pr_view_comments_with_json",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0010",
+    "taskIssue" : 4,
+    "prNumber" : null,
+    "sessionId" : "7b849cde-247c-450d-bc9c-131ca9519e55",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 13,
+    "timestamp" : "2026-09-29T00:08:44Z",
+    "headSha" : null,
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; gh api repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/contents/1-arrival-deadline-control-remove-before-merge/shepherd-campaign.json -f ref=experiment/shepherd-control --jq '.content' | base64 --decode",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-200830-4.md",
+      "lineStart" : 61,
+      "lineEnd" : 74,
+      "excerpt" : "```\ngh: Not Found (HTTP 404)\nbase64: stdin: (null): error decoding base64 input stream\n<shellId: 0 completed with exit code 1>\n```",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "missing_campaign_metadata",
+      "origin" : "shepherd_harness",
+      "ruleId" : "INVALID_REMOTE_RESOURCE_LOOKUP",
+      "explanation" : "The command requested a repository resource or encoded payload that did not exist."
+    },
+    "underlyingProblemId" : "problem-4-30-61",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0011",
+    "taskIssue" : 4,
+    "prNumber" : null,
+    "sessionId" : "7b849cde-247c-450d-bc9c-131ca9519e55",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 538,
+    "timestamp" : "2026-09-29T00:17:29Z",
+    "headSha" : "63acf336f2dfd08eb132f0372e0cda05d2edee7c",
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; HEAD=$(gh pr view 9 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json headRefOid --jq '.headRefOid'); gh api \"/repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/commits/$HEAD/check-runs?per_page=100\" --paginate --slurp\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-200830-4.md",
+      "lineStart" : 544,
+      "lineEnd" : 737,
+      "excerpt" : "<details>\n<summary>145 lines</summary>\n\n```\nthe `--slurp` option is not supported with `--jq` or `--template`\n\nMakes an authenticated HTTP request to the GitHub API and prints the response.\n\nThe endpoint argument should either be a path of a GitHub API v3 endpoint, or\n`graphql` to access the GitHub API v4.\n\nPlaceholder values `{owner}`, `{repo}`, and `{branch}` in the endpoint\nargument will get replaced with values from the repository of the current\ndirectory or the repository specified in the `GH_REPO` environment variable.\nNote that in some shells, for example PowerShell, you may need to enclose\nany value that contains `{...}` in quotes to prevent the shell from\napplying special meaning to curly braces.\n\nThe `-p/--preview` flag enables opting into previews, which are feature-flagged,\nexperimental API endpoints or behaviors. The API expects opt-in via the `Accept`\nheader with format `application/vnd.github.<preview-name>-preview+json` and this\ncommand facilitates that via `--preview <preview-name>`. To send a request for\nthe corsair and scarlet witch previews, you could use `-p corsair,scarlet-witch`\nor `--preview corsair --preview scarlet-witch`.\n\nThe default HTTP request method \n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "malformed_invocation",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "INVALID_TOOL_INVOCATION",
+      "explanation" : "The failure is caused by the agent's command or execution context."
+    },
+    "underlyingProblemId" : "problem-4-30-544",
+    "recurrenceSignature" : "gh_api_slurp_with_jq",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0012",
+    "taskIssue" : 4,
+    "prNumber" : null,
+    "sessionId" : "7b849cde-247c-450d-bc9c-131ca9519e55",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 575,
+    "timestamp" : "2026-09-29T00:18:06Z",
+    "headSha" : "63acf336f2dfd08eb132f0372e0cda05d2edee7c",
+    "detectionGate" : null,
+    "activity" : "github_pr_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}; gh pr view 9 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --comments --json comments,reviews --jq '{comments:[.comments[]|{author:.author.login,body,url}],reviews:[.reviews[]|{author:.author.login,state,body,url}]}'",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-200830-4.md",
+      "lineStart" : 1004,
+      "lineEnd" : 1060,
+      "excerpt" : "<details>\n<summary>32 lines</summary>\n\n```\nspecify only one of --comments or --json\n\nDisplay the title, body, and other information about a pull request.\n\nWithout an argument, the pull request that belongs to the current branch\nis displayed.\n\nWith `--web` flag, open the pull request in a web browser instead.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh pr view [<number> | <url> | <branch>] [flags]\n\nFLAGS\n  -c, --comments          View pull request comments\n  -q, --jq expression     Filter JSON output using a jq expression\n      --json fields       Output JSON with the specified fields\n  -t, --template string   Format JSON output using a Go template; see \"gh help formatting\"\n  -w, --web               Open a pull request in the browser\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nJSON FIELDS\n  additions, assignees, author, autoMergeRequest, baseRefName, baseRefOid, body,\n  changedFiles, closed, closedAt, closingIssuesReferences, comments, commits,\n  createdAt, deletions, files, fullDatabaseId, headRefName, headRefOid,\n\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "malformed_invocation",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "INVALID_TOOL_INVOCATION",
+      "explanation" : "The failure is caused by the agent's command or execution context."
+    },
+    "underlyingProblemId" : "problem-4-30-1004",
+    "recurrenceSignature" : "gh_pr_view_comments_with_json",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0016",
+    "taskIssue" : 5,
+    "prNumber" : null,
+    "sessionId" : "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 587,
+    "timestamp" : "2026-09-29T00:36:04Z",
+    "headSha" : "45d2d93aff1a765f8df3231e423ef3c23ce97982",
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=\"$HOME/Downloads/apache-ant-1.10.13\" M2_HOME=\"$HOME/Downloads/apache-maven-3.9.8\"; export PATH=\"$APPCAT_HOME:$M2_HOME/bin:$ANT_HOME/bin:$JAVA_HOME/bin:$IDEA_HOME:$PATH\"; REPO='edburns/dd-3070518-cargotracker-darwin-arm64-01'; SHA='d158abe15af97b22a7a3d234fab83c0bd6dbab87'; gh api \"/repos/$REPO/commits/$SHA/check-runs?per_page=100\" --paginate --slurp --jq '[.[].check_runs[]|{name,status,conclusion,details_ur\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-202616-5.md",
+      "lineStart" : 1795,
+      "lineEnd" : 1988,
+      "excerpt" : "<details>\n<summary>145 lines</summary>\n\n```\nthe `--slurp` option is not supported with `--jq` or `--template`\n\nMakes an authenticated HTTP request to the GitHub API and prints the response.\n\nThe endpoint argument should either be a path of a GitHub API v3 endpoint, or\n`graphql` to access the GitHub API v4.\n\nPlaceholder values `{owner}`, `{repo}`, and `{branch}` in the endpoint\nargument will get replaced with values from the repository of the current\ndirectory or the repository specified in the `GH_REPO` environment variable.\nNote that in some shells, for example PowerShell, you may need to enclose\nany value that contains `{...}` in quotes to prevent the shell from\napplying special meaning to curly braces.\n\nThe `-p/--preview` flag enables opting into previews, which are feature-flagged,\nexperimental API endpoints or behaviors. The API expects opt-in via the `Accept`\nheader with format `application/vnd.github.<preview-name>-preview+json` and this\ncommand facilitates that via `--preview <preview-name>`. To send a request for\nthe corsair and scarlet witch previews, you could use `-p corsair,scarlet-witch`\nor `--preview corsair --preview scarlet-witch`.\n\nThe default HTTP request method \n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "malformed_invocation",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "INVALID_TOOL_INVOCATION",
+      "explanation" : "The failure is caused by the agent's command or execution context."
+    },
+    "underlyingProblemId" : "problem-5-30-1795",
+    "recurrenceSignature" : "gh_api_slurp_with_jq",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0017",
+    "taskIssue" : 5,
+    "prNumber" : null,
+    "sessionId" : "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 657,
+    "timestamp" : "2026-09-29T00:37:14Z",
+    "headSha" : "45d2d93aff1a765f8df3231e423ef3c23ce97982",
+    "detectionGate" : null,
+    "activity" : "browser_acceptance_script",
+    "commandOrCheck" : "npx --yes playwright screenshot --wait-for-timeout=1000 'http://localhost:8080/cargo-tracker/admin/dialogs/changeArrivalDeadlineDate.xhtml?trackingId=DEF789' '/Users/edburns/.copilot/session-state/ad2799ab-3dbf-4fdf-82cb-ba037576ae6d/files/dialog-pr10.png'",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-202616-5.md",
+      "lineStart" : 2274,
+      "lineEnd" : 2299,
+      "excerpt" : "<details>\n<summary>10 lines</summary>\n\n```\nError: command.parse: Executable doesn't exist at /Users/edburns/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝\n<shellId: 14 completed with exit code 1>\n```\n\n</details>",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "infrastructure",
+      "subtype" : "missing_tool_dependency",
+      "origin" : "local_environment",
+      "ruleId" : "PLAYWRIGHT_BROWSER_NOT_INSTALLED",
+      "explanation" : "The functional test was invoked before its browser dependency was installed."
+    },
+    "underlyingProblemId" : "problem-5-30-2274",
+    "recurrenceSignature" : "playwright_browser_not_installed",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later browser acceptance invocation succeeded in the same session."
+    }
+  }, {
+    "id" : "event-0018",
+    "taskIssue" : 5,
+    "prNumber" : null,
+    "sessionId" : "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 739,
+    "timestamp" : "2026-09-29T00:38:36Z",
+    "headSha" : "45d2d93aff1a765f8df3231e423ef3c23ce97982",
+    "detectionGate" : null,
+    "activity" : "browser_acceptance_script",
+    "commandOrCheck" : "cd '/Users/edburns/.copilot/session-state/ad2799ab-3dbf-4fdf-82cb-ba037576ae6d/files/browser-test' && npx playwright test dialog.spec.js --reporter=line --workers=1",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-202616-5.md",
+      "lineStart" : 2403,
+      "lineEnd" : 2479,
+      "excerpt" : "<details>\n<summary>51 lines</summary>\n\n```\nRunning 1 test using 1 worker\n\n[1/1] dialog.spec.js:7:1 › deadline dialog supports cancel and update\n  1) dialog.spec.js:7:1 › deadline dialog supports cancel and update ───────────────────────────────\n\n    Test timeout of 30000ms exceeded.\n\n    Error: page.waitForResponse: Test ended.\n\n      35 |     originalDeadline === \"12/05/2026\" ? \"12/06/2026\" : \"12/05/2026\";\n      36 |   await input.fill(updatedDeadline);\n    > 37 |   const updateResponse = page.waitForResponse(\n         |                               ^\n      38 |     candidate =>\n      39 |       candidate.request().method() === \"POST\" &&\n      40 |       candidate.url().includes(\"changeArrivalDeadlineDate.xhtml\")\n        at /Users/edburns/.copilot/session-state/ad2799ab-3dbf-4fdf-82cb-ba037576ae6d/files/browser-test/dialog.spec.js:37:31\n\n    Error: locator.click: Test ended.\n    Call log:\n      - waiting for getByRole('button', { name: 'Update' })\n        - locator resolved to <button aria-label=\"\" type=\"submit\" role=\"button\" id=\"j_id_6:j_id_h\" name=\"j_id_6:j_id_h\" aria-disabled=\"false\" onclick=\"PrimeFaces.ab({s:\"j_id_6:j_id_h\",f:\"j_id_6\"});return false;\" class=\"ui-button ui-widg\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "test_harness_error",
+      "origin" : "agent_authored_test_harness",
+      "ruleId" : "FUNCTIONAL_TEST_HARNESS_ERROR",
+      "explanation" : "The functional harness used an invalid interaction or expectation."
+    },
+    "underlyingProblemId" : "problem-5-30-2403",
+    "recurrenceSignature" : "functional_test_harness_error",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0019",
+    "taskIssue" : 5,
+    "prNumber" : null,
+    "sessionId" : "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d",
+    "shepherdStage" : 30,
+    "eventKind" : "test_failure",
+    "relativeOffsetSeconds" : 739,
+    "timestamp" : "2026-09-29T00:38:36Z",
+    "headSha" : "45d2d93aff1a765f8df3231e423ef3c23ce97982",
+    "detectionGate" : null,
+    "activity" : "browser_acceptance_script",
+    "commandOrCheck" : "cd '/Users/edburns/.copilot/session-state/ad2799ab-3dbf-4fdf-82cb-ba037576ae6d/files/browser-test' && npx playwright test dialog.spec.js --reporter=line --workers=1",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-202616-5.md",
+      "lineStart" : 2403,
+      "lineEnd" : 2479,
+      "excerpt" : "<details>\n<summary>51 lines</summary>\n\n```\nRunning 1 test using 1 worker\n\n[1/1] dialog.spec.js:7:1 › deadline dialog supports cancel and update\n  1) dialog.spec.js:7:1 › deadline dialog supports cancel and update ───────────────────────────────\n\n    Test timeout of 30000ms exceeded.\n\n    Error: page.waitForResponse: Test ended.\n\n      35 |     originalDeadline === \"12/05/2026\" ? \"12/06/2026\" : \"12/05/2026\";\n      36 |   await input.fill(updatedDeadline);\n    > 37 |   const updateResponse = page.waitForResponse(\n         |                               ^\n      38 |     candidate =>\n      39 |       candidate.request().method() === \"POST\" &&\n      40 |       candidate.url().includes(\"changeArrivalDeadlineDate.xhtml\")\n        at /Users/edburns/.copilot/session-state/ad2799ab-3dbf-4fdf-82cb-ba037576ae6d/files/browser-test/dialog.spec.js:37:31\n\n    Error: locator.click: Test ended.\n    Call log:\n      - waiting for getByRole('button', { name: 'Update' })\n        - locator resolved to <button aria-label=\"\" type=\"submit\" role=\"button\" id=\"j_id_6:j_id_h\" name=\"j_id_6:j_id_h\" aria-disabled=\"false\" onclick=\"PrimeFaces.ab({s:\"j_id_6:j_id_h\",f:\"j_id_6\"});return false;\" class=\"ui-button ui-widg\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "test_harness_error",
+      "origin" : "agent_authored_test_harness",
+      "ruleId" : "FUNCTIONAL_TEST_HARNESS_ERROR",
+      "explanation" : "The functional harness used an invalid interaction or expectation."
+    },
+    "underlyingProblemId" : "problem-5-30-2403",
+    "recurrenceSignature" : "functional_test_harness_error",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0020",
+    "taskIssue" : 5,
+    "prNumber" : null,
+    "sessionId" : "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 763,
+    "timestamp" : "2026-09-29T00:39:00Z",
+    "headSha" : "45d2d93aff1a765f8df3231e423ef3c23ce97982",
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=\"$HOME/Downloads/apache-ant-1.10.13\" M2_HOME=\"$HOME/Downloads/apache-maven-3.9.8\"; export PATH=\"$APPCAT_HOME:$M2_HOME/bin:$ANT_HOME/bin:$JAVA_HOME/bin:$IDEA_HOME:$PATH\"; REPO='edburns/dd-3070518-cargotracker-darwin-arm64-01'; PR=10; OWNER=${REPO%%/*}; NAME=${REPO#*/}; gh api graphql --paginate -f query='query($owner:String!,$name:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$name){pu\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-202616-5.md",
+      "lineStart" : 2807,
+      "lineEnd" : 2867,
+      "excerpt" : "<details>\n<summary>36 lines</summary>\n\n```\n{\n  \"reviewDecision\": \"\",\n  \"unresolved\": []\n}\nspecify only one of --comments or --json\n\nDisplay the title, body, and other information about a pull request.\n\nWithout an argument, the pull request that belongs to the current branch\nis displayed.\n\nWith `--web` flag, open the pull request in a web browser instead.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh pr view [<number> | <url> | <branch>] [flags]\n\nFLAGS\n  -c, --comments          View pull request comments\n  -q, --jq expression     Filter JSON output using a jq expression\n      --json fields       Output JSON with the specified fields\n  -t, --template string   Format JSON output using a Go template; see \"gh help formatting\"\n  -w, --web               Open a pull request in the browser\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nJSON FIELDS\n  additions, assignees, author, autoMergeRequest, baseRefName, baseRefOid, body,\n  changedFiles, closed, closedAt, closingIssuesReferences, comments, commits,\n  createdAt, deletions, f\n…",
+      "partialOutputCorroborated" : false
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "malformed_invocation",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "INVALID_TOOL_INVOCATION",
+      "explanation" : "The failure is caused by the agent's command or execution context."
+    },
+    "underlyingProblemId" : "problem-5-30-2807",
+    "recurrenceSignature" : "gh_pr_view_comments_with_json",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0021",
+    "taskIssue" : 5,
+    "prNumber" : 10,
+    "sessionId" : "b1d8e363-6678-4eb2-a0f8-7aa8699647d4",
+    "shepherdStage" : 40,
+    "eventKind" : "review_finding",
+    "relativeOffsetSeconds" : 314,
+    "timestamp" : "2026-09-29T00:47:41Z",
+    "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87",
+    "detectionGate" : "ccra_review",
+    "activity" : "github_api_query",
+    "commandOrCheck" : "src/main/webapp/admin/dialogs/changeArrivalDeadlineDate.xhtml",
+    "exitCode" : null,
+    "evidence" : {
+      "artifact" : "phase2-task-20260928-204225-5.md",
+      "lineStart" : 462,
+      "lineEnd" : 492,
+      "excerpt" : "PrimeFaces 8 falls back to processing `@all` when `process` is omitted. If the required deadline is cleared, clicking Cancel therefore triggers validation and never reaches `cancel()`, leaving the dialog impossible to dismiss. Process only the button for this action.",
+      "partialOutputCorroborated" : false
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "product_defect",
+      "subtype" : "behavioral_defect",
+      "origin" : "product_code",
+      "ruleId" : "CCRA_ACTIONABLE_COMMENT",
+      "explanation" : "A top-level Copilot code-review comment requested a code correction."
+    },
+    "underlyingProblemId" : "problem-review-4128478304",
+    "recurrenceSignature" : "ccra_actionable_comment",
+    "resolution" : {
+      "status" : "fixed",
+      "timestamp" : "2026-09-29T00:49:50Z",
+      "headSha" : "d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf",
+      "summary" : "The task's final PR head contains the accepted remediation."
+    },
+    "reviewCommentId" : "4128478304"
+  }, {
+    "id" : "event-0022",
+    "taskIssue" : 5,
+    "prNumber" : 10,
+    "sessionId" : "b1d8e363-6678-4eb2-a0f8-7aa8699647d4",
+    "shepherdStage" : 40,
+    "eventKind" : "review_finding",
+    "relativeOffsetSeconds" : 314,
+    "timestamp" : "2026-09-29T00:47:41Z",
+    "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87",
+    "detectionGate" : "ccra_review",
+    "activity" : "github_api_query",
+    "commandOrCheck" : "src/main/webapp/admin/dialogs/changeArrivalDeadlineDate.xhtml",
+    "exitCode" : null,
+    "evidence" : {
+      "artifact" : "phase2-task-20260928-204225-5.md",
+      "lineStart" : 462,
+      "lineEnd" : 492,
+      "excerpt" : "The required validator can reject an empty value, but this Ajax button has no update target, so the newly queued `p:message` is not rendered and the user gets no validation feedback. Re-render the form (or the message component) after submission.",
+      "partialOutputCorroborated" : false
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "product_defect",
+      "subtype" : "behavioral_defect",
+      "origin" : "product_code",
+      "ruleId" : "CCRA_ACTIONABLE_COMMENT",
+      "explanation" : "A top-level Copilot code-review comment requested a code correction."
+    },
+    "underlyingProblemId" : "problem-review-4128478338",
+    "recurrenceSignature" : "ccra_actionable_comment",
+    "resolution" : {
+      "status" : "fixed",
+      "timestamp" : "2026-09-29T00:49:50Z",
+      "headSha" : "d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf",
+      "summary" : "The task's final PR head contains the accepted remediation."
+    },
+    "reviewCommentId" : "4128478338"
+  }, {
+    "id" : "event-0023",
+    "taskIssue" : 5,
+    "prNumber" : 10,
+    "sessionId" : "b1d8e363-6678-4eb2-a0f8-7aa8699647d4",
+    "shepherdStage" : 40,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 342,
+    "timestamp" : "2026-09-29T00:48:09Z",
+    "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87",
+    "detectionGate" : null,
+    "activity" : "maven_package",
+    "commandOrCheck" : "set -o pipefail\nexport IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\"\nexport APPCAT_HOME=/Users/edburns/.appcat\nexport JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\"\nexport ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13\nexport M2_HOME=${HOME}/Downloads/apache-maven-3.9.8\nexport PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}\ncd /Users/edburns/workareas/review-copilot-pr-10\nLOG=\"$(date +%Y%m%d-%H%M)-job-logs.txt\"\necho \"MAVEN_LOG=$LOG\"\nmvn -DskipTests package 2>&1 | tee \"$LOG\"\nstatus=${PIPESTATUS[0]}\nprintf '\\nM\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase2-task-20260928-204225-5.md",
+      "lineStart" : 985,
+      "lineEnd" : 1073,
+      "excerpt" : "<details>\n<summary>57 lines</summary>\n\n```\nMAVEN_LOG=20260928-2048-job-logs.txt\nWARNING: A restricted method in java.lang.System has been called\nWARNING: java.lang.System::load has been called by org.fusesource.jansi.internal.JansiLoader in an unnamed module (file:/Users/edburns/Downloads/apache-maven-3.9.8/lib/jansi-2.4.1.jar)\nWARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module\nWARNING: Restricted methods will be blocked in a future release unless native access is enabled\n\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/Users/edburns/Downloads/apache-maven-3.9.8/lib/guava-33.2.1-jre.jar)\nWARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n[INFO] Scanning for projects...\n[INFO] \n[INFO] -------------------< org.eclipse.ee4j:cargo-tracker >-------------------\n[INFO] Building Eclipse Cargo Tracker 1.0-SNAPSHOT\n[INFO]   f\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "incompatible_default_jdk",
+      "origin" : "shepherd_harness",
+      "ruleId" : "UNSUPPORTED_SOURCE_LEVEL_FOR_SELECTED_JDK",
+      "explanation" : "The selected JDK rejects the project's configured language level."
+    },
+    "underlyingProblemId" : "problem-5-40-985",
+    "recurrenceSignature" : "unsupported_source_level_for_selected_jdk",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0024",
+    "taskIssue" : 5,
+    "prNumber" : 10,
+    "sessionId" : "b1d8e363-6678-4eb2-a0f8-7aa8699647d4",
+    "shepherdStage" : 40,
+    "eventKind" : "build_failure",
+    "relativeOffsetSeconds" : 342,
+    "timestamp" : "2026-09-29T00:48:09Z",
+    "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87",
+    "detectionGate" : null,
+    "activity" : "maven_package",
+    "commandOrCheck" : "set -o pipefail\nexport IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\"\nexport APPCAT_HOME=/Users/edburns/.appcat\nexport JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\"\nexport ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13\nexport M2_HOME=${HOME}/Downloads/apache-maven-3.9.8\nexport PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}\ncd /Users/edburns/workareas/review-copilot-pr-10\nLOG=\"$(date +%Y%m%d-%H%M)-job-logs.txt\"\necho \"MAVEN_LOG=$LOG\"\nmvn -DskipTests package 2>&1 | tee \"$LOG\"\nstatus=${PIPESTATUS[0]}\nprintf '\\nM\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase2-task-20260928-204225-5.md",
+      "lineStart" : 985,
+      "lineEnd" : 1073,
+      "excerpt" : "<details>\n<summary>57 lines</summary>\n\n```\nMAVEN_LOG=20260928-2048-job-logs.txt\nWARNING: A restricted method in java.lang.System has been called\nWARNING: java.lang.System::load has been called by org.fusesource.jansi.internal.JansiLoader in an unnamed module (file:/Users/edburns/Downloads/apache-maven-3.9.8/lib/jansi-2.4.1.jar)\nWARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module\nWARNING: Restricted methods will be blocked in a future release unless native access is enabled\n\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/Users/edburns/Downloads/apache-maven-3.9.8/lib/guava-33.2.1-jre.jar)\nWARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n[INFO] Scanning for projects...\n[INFO] \n[INFO] -------------------< org.eclipse.ee4j:cargo-tracker >-------------------\n[INFO] Building Eclipse Cargo Tracker 1.0-SNAPSHOT\n[INFO]   f\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "incompatible_default_jdk",
+      "origin" : "shepherd_harness",
+      "ruleId" : "UNSUPPORTED_SOURCE_LEVEL_FOR_SELECTED_JDK",
+      "explanation" : "The selected JDK rejects the project's configured language level."
+    },
+    "underlyingProblemId" : "problem-5-40-985",
+    "recurrenceSignature" : "unsupported_source_level_for_selected_jdk",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0001",
+    "taskIssue" : 6,
+    "prNumber" : null,
+    "sessionId" : "51992c93-8b5e-443a-8aa4-aa8dfbe34233",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 12,
+    "timestamp" : "2026-09-29T00:55:59Z",
+    "headSha" : null,
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "gh api repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/contents/1-arrival-deadline-control-remove-before-merge/shepherd-campaign.json -f ref=experiment/shepherd-control --jq '.content' | tr -d '\\n' | base64 --decode",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-205544-6.md",
+      "lineStart" : 85,
+      "lineEnd" : 98,
+      "excerpt" : "```\ngh: Not Found (HTTP 404)\nbase64: stdin: (null): error decoding base64 input stream\n<shellId: 2 completed with exit code 1>\n```",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "missing_campaign_metadata",
+      "origin" : "shepherd_harness",
+      "ruleId" : "INVALID_REMOTE_RESOURCE_LOOKUP",
+      "explanation" : "The command requested a repository resource or encoded payload that did not exist."
+    },
+    "underlyingProblemId" : "problem-6-30-85",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0002",
+    "taskIssue" : 6,
+    "prNumber" : null,
+    "sessionId" : "51992c93-8b5e-443a-8aa4-aa8dfbe34233",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 3880,
+    "timestamp" : "2026-09-29T02:00:27Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "detectionGate" : null,
+    "activity" : "browser_acceptance_script",
+    "commandOrCheck" : "cd /Users/edburns/.copilot/session-state/51992c93-8b5e-443a-8aa4-aa8dfbe34233/files/task-6 && node acceptance.mjs",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-205544-6.md",
+      "lineStart" : 2074,
+      "lineEnd" : 2158,
+      "excerpt" : "<details>\n<summary>66 lines</summary>\n\n```\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nlocator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('iframe').last().contentFrame().getByRole('button', { name: 'Update' })\n    - locator resolved to <button aria-label=\"\" type=\"submit\" role=\"button\" id=\"j_id_6:j_id_h\" name=\"j_id_6:j_id_h\" aria-disabled=\"false\" class=\"ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only\" onclick=\"PrimeFaces.ab({s:\"j_id_6:j_id_h\",f:\"j_id_6\",u:\"j_id_6\"});return false;\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - performing click action\n      - <table class=\"ui-datepicker-calendar\">…</table> from <div id=\"j_id_6:arrivalDeadlineDate_panel\" class=\"ui-datepicker ui-widget ui-widget-content ui-helper-clearfix ui-corner-all ui-shadow ui-input-overlay p-datepicker-panel\">…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "test_harness_error",
+      "origin" : "agent_authored_test_harness",
+      "ruleId" : "FUNCTIONAL_TEST_HARNESS_ERROR",
+      "explanation" : "The functional harness used an invalid interaction or expectation."
+    },
+    "underlyingProblemId" : "problem-6-30-2074",
+    "recurrenceSignature" : "functional_test_harness_error",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0003",
+    "taskIssue" : 6,
+    "prNumber" : null,
+    "sessionId" : "51992c93-8b5e-443a-8aa4-aa8dfbe34233",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 3890,
+    "timestamp" : "2026-09-29T02:00:37Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "detectionGate" : null,
+    "activity" : "browser_acceptance_script",
+    "commandOrCheck" : "cd /Users/edburns/.copilot/session-state/51992c93-8b5e-443a-8aa4-aa8dfbe34233/files/task-6 && node acceptance.mjs",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-205544-6.md",
+      "lineStart" : 2182,
+      "lineEnd" : 2254,
+      "excerpt" : "<details>\n<summary>53 lines</summary>\n\n```\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: The input did not match the regular expression /Change Destination|Destination/. Input:\n\n'Origin:\\tHong Kong\\n' +\n  'Current destination:\\tMelbourne\\n' +\n  'New destination:\\t\\n' +\n  'Chicago (USCHI)\\n' +\n  'Dallas (USDAL)\\n' +\n  'Guttenburg (SEGOT)\\n' +\n  'Hamburg (DEHAM)\\n' +\n  'Hangzhou (CNHGH)\\n' +\n  'Helsinki (FIHEL)\\n' +\n  'New York (USNYC)\\n' +\n  'Rotterdam (NLRTM)\\n' +\n  'Shanghai (CNSHA)\\n' +\n  'Stockholm (SESTO)\\n' +\n  'Tokyo (JNTKO)\\n' +\n  'Chicago (USCHI)\\n' +\n  '\\n' +\n  '\\n' +\n  'Cancel\\n' +\n  '\\t\\n' +\n  'Update'\n\n    at file:///Users/edburns/.copilot/session-state/51992c93-8b5e-443a-8aa4-aa8dfbe34233/files/task-6/acceptance.mjs:69:10 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 'Origin:\\tHong Kong\\n' +\n    'Current destination:\\tMelbourne\\n' +\n    'New destination:\\t\\n' +\n    'Chicago (USCHI)\\n' +\n    'Dallas (USDAL)\\n' +\n    'Guttenburg (SEGOT)\\n' +\n    'Hamburg (DEHAM)\\n' +\n    'Hangzhou (CNHGH)\\n' +\n    'Helsinki (FIHEL)\\n' +\n    'New York (USNYC)\\n' +\n    'Rotterdam (NLRTM)\\n' +\n    'Shanghai (CNSHA)\\n\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "test_harness_error",
+      "origin" : "agent_authored_test_harness",
+      "ruleId" : "FUNCTIONAL_TEST_HARNESS_ERROR",
+      "explanation" : "The functional harness used an invalid interaction or expectation."
+    },
+    "underlyingProblemId" : "problem-6-30-2182",
+    "recurrenceSignature" : "functional_test_harness_error",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0004",
+    "taskIssue" : 6,
+    "prNumber" : null,
+    "sessionId" : "51992c93-8b5e-443a-8aa4-aa8dfbe34233",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 3895,
+    "timestamp" : "2026-09-29T02:00:42Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "detectionGate" : null,
+    "activity" : "browser_acceptance_script",
+    "commandOrCheck" : "cd /Users/edburns/.copilot/session-state/51992c93-8b5e-443a-8aa4-aa8dfbe34233/files/task-6 && node acceptance.mjs",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-205544-6.md",
+      "lineStart" : 2278,
+      "lineEnd" : 2311,
+      "excerpt" : "<details>\n<summary>15 lines</summary>\n\n```\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected \"actual\" to be strictly unequal to:\n\n'12/15/2026'\n    at file:///Users/edburns/.copilot/session-state/51992c93-8b5e-443a-8aa4-aa8dfbe34233/files/task-6/acceptance.mjs:27:10 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: '12/15/2026',\n  expected: '12/15/2026',\n  operator: 'notStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.21.0\n<shellId: 30 completed with exit code 1>\n```\n\n</details>",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "leftover_state",
+      "origin" : "agent_authored_test_harness",
+      "ruleId" : "ACCEPTANCE_LEFTOVER_STATE",
+      "explanation" : "The acceptance script encountered a value persisted by its previous attempt."
+    },
+    "underlyingProblemId" : "problem-6-30-2278",
+    "recurrenceSignature" : "acceptance_leftover_state",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0005",
+    "taskIssue" : 6,
+    "prNumber" : null,
+    "sessionId" : "51992c93-8b5e-443a-8aa4-aa8dfbe34233",
+    "shepherdStage" : 30,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 3918,
+    "timestamp" : "2026-09-29T02:01:05Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "detectionGate" : null,
+    "activity" : "maven_liberty_goal",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\"\nexport APPCAT_HOME=/Users/edburns/.appcat\nexport JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\"\nexport ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13\nexport M2_HOME=${HOME}/Downloads/apache-maven-3.9.8\nexport PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}\nexport JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home\"\nexport PATH=${JAVA_HOME}/bin:${PATH}\ncd /Users/edburns/.copilot/session-state/51992c93-8b5e-443a-8aa4-aa8dfbe34233/files\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-205544-6.md",
+      "lineStart" : 2449,
+      "lineEnd" : 2504,
+      "excerpt" : "<details>\n<summary>19 lines</summary>\n\n```\n[INFO] Scanning for projects...\nDownloading from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml\nDownloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml\nProgress (1): 3.7 kB\nProgress (1): 7.4 kB\nProgress (1): 13 kB \nProgress (1): 19 kB\nProgress (1): 20 kB\nProgress (2): 20 kB | 3.9 kB\nProgress (2): 20 kB | 7.7 kB\nProgress (2): 20 kB | 10 kB \n                           \nDownloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml (20 kB at 86 kB/s)\nDownloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml (10 kB at 44 kB/s)\n[INFO] ------------------------------------------------------------------------\n[INFO] BUILD FAILURE\n[INFO] ------------------------------------------------------------------------\n[INFO] Total time:  0.708 s\n[INFO] Finished at: 2026-09-28T22:01:06-04:00\n[INFO] ------------------------------------------------------------------------\n[ERROR] No plugin found for prefix 'liberty' in the current project and in the plugin groups [org.apache.maven.plugins, or\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "nonexistent_plugin",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "MAVEN_PLUGIN_PREFIX_NOT_AVAILABLE",
+      "explanation" : "The command invoked a Maven plugin prefix unavailable in the active profile."
+    },
+    "underlyingProblemId" : "problem-6-30-2449",
+    "recurrenceSignature" : "maven_unavailable_plugin_prefix",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0006",
+    "taskIssue" : 6,
+    "prNumber" : null,
+    "sessionId" : "51992c93-8b5e-443a-8aa4-aa8dfbe34233",
+    "shepherdStage" : 30,
+    "eventKind" : "build_failure",
+    "relativeOffsetSeconds" : 3918,
+    "timestamp" : "2026-09-29T02:01:05Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "detectionGate" : null,
+    "activity" : "maven_liberty_goal",
+    "commandOrCheck" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\"\nexport APPCAT_HOME=/Users/edburns/.appcat\nexport JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\"\nexport ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13\nexport M2_HOME=${HOME}/Downloads/apache-maven-3.9.8\nexport PATH=${APPCAT_HOME}:${M2_HOME}/bin:${ANT_HOME}/bin:${JAVA_HOME}/bin:${IDEA_HOME}:${PATH}\nexport JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home\"\nexport PATH=${JAVA_HOME}/bin:${PATH}\ncd /Users/edburns/.copilot/session-state/51992c93-8b5e-443a-8aa4-aa8dfbe34233/files\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase1-task-20260928-205544-6.md",
+      "lineStart" : 2449,
+      "lineEnd" : 2504,
+      "excerpt" : "<details>\n<summary>19 lines</summary>\n\n```\n[INFO] Scanning for projects...\nDownloading from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml\nDownloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml\nProgress (1): 3.7 kB\nProgress (1): 7.4 kB\nProgress (1): 13 kB \nProgress (1): 19 kB\nProgress (1): 20 kB\nProgress (2): 20 kB | 3.9 kB\nProgress (2): 20 kB | 7.7 kB\nProgress (2): 20 kB | 10 kB \n                           \nDownloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml (20 kB at 86 kB/s)\nDownloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml (10 kB at 44 kB/s)\n[INFO] ------------------------------------------------------------------------\n[INFO] BUILD FAILURE\n[INFO] ------------------------------------------------------------------------\n[INFO] Total time:  0.708 s\n[INFO] Finished at: 2026-09-28T22:01:06-04:00\n[INFO] ------------------------------------------------------------------------\n[ERROR] No plugin found for prefix 'liberty' in the current project and in the plugin groups [org.apache.maven.plugins, or\n…",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "nonexistent_plugin",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "MAVEN_PLUGIN_PREFIX_NOT_AVAILABLE",
+      "explanation" : "The command invoked a Maven plugin prefix unavailable in the active profile."
+    },
+    "underlyingProblemId" : "problem-6-30-2449",
+    "recurrenceSignature" : "maven_unavailable_plugin_prefix",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  }, {
+    "id" : "event-0009",
+    "taskIssue" : 6,
+    "prNumber" : 11,
+    "sessionId" : "1afcc786-9f86-4ae0-9717-bb9817f28ed6",
+    "shepherdStage" : 40,
+    "eventKind" : "nonzero_tool_exit",
+    "relativeOffsetSeconds" : 145,
+    "timestamp" : "2026-09-29T02:08:42Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "detectionGate" : null,
+    "activity" : "github_api_query",
+    "commandOrCheck" : "set -euo pipefail\nREPO='edburns/dd-3070518-cargotracker-darwin-arm64-01'\nPR_NUMBER=11\nBASE_BRANCH='experiment/shepherd-control'\nREVIEW_ID=5346861880\nEXPECTED_HEAD='a56afb39ab5771afd255b8962ea4e10a39af0347'\n[ \"$BASE_BRANCH\" != main ] || { echo \"ERROR: BASE_BRANCH must never be 'main'.\"; exit 1; }\nPR_JSON=$(gh pr view \"$PR_NUMBER\" -R \"$REPO\" --json state,isDraft,headRefOid,baseRefName,mergeable,statusCheckRollup)\nCURRENT_HEAD=$(printf '%s' \"$PR_JSON\" | jq -r '.headRefOid')\n[ \"$CURRENT_HEAD\" = \"$EXPECTED_HEAD\" ] || { echo \"SHEPHERD FAILED: PR head changed from reviewed head $EXPECTED_HEAD to $CUR\n…",
+    "exitCode" : 1,
+    "evidence" : {
+      "artifact" : "phase2-task-20260928-220613-6.md",
+      "lineStart" : 512,
+      "lineEnd" : 551,
+      "excerpt" : "```\naccepts 1 arg(s), received 4\n<shellId: 3 completed with exit code 1>\n```",
+      "partialOutputCorroborated" : true
+    },
+    "classification" : {
+      "status" : "classified",
+      "category" : "agent_operational_error",
+      "subtype" : "malformed_invocation",
+      "origin" : "agent_tool_invocation",
+      "ruleId" : "INVALID_TOOL_INVOCATION",
+      "explanation" : "The failure is caused by the agent's command or execution context."
+    },
+    "underlyingProblemId" : "problem-6-40-512",
+    "recurrenceSignature" : "gh_api_wrong_argument_count",
+    "resolution" : {
+      "status" : "recovered",
+      "timestamp" : null,
+      "headSha" : null,
+      "summary" : "A later tool invocation completed successfully in the same session."
+    }
+  } ],
+  "underlyingProblems" : [ {
+    "id" : "problem-2-30-340",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "eventIds" : [ "event-0013" ]
+  }, {
+    "id" : "problem-2-30-383",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "eventIds" : [ "event-0014" ]
+  }, {
+    "id" : "problem-2-30-890",
+    "recurrenceSignature" : "gh_api_slurp_with_jq",
+    "eventIds" : [ "event-0015" ]
+  }, {
+    "id" : "problem-3-30-856",
+    "recurrenceSignature" : "stage_30_change_request",
+    "eventIds" : [ "event-0007" ]
+  }, {
+    "id" : "problem-3-30-1435",
+    "recurrenceSignature" : "gh_pr_view_comments_with_json",
+    "eventIds" : [ "event-0008" ]
+  }, {
+    "id" : "problem-4-30-61",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "eventIds" : [ "event-0010" ]
+  }, {
+    "id" : "problem-4-30-544",
+    "recurrenceSignature" : "gh_api_slurp_with_jq",
+    "eventIds" : [ "event-0011" ]
+  }, {
+    "id" : "problem-4-30-1004",
+    "recurrenceSignature" : "gh_pr_view_comments_with_json",
+    "eventIds" : [ "event-0012" ]
+  }, {
+    "id" : "problem-5-30-1795",
+    "recurrenceSignature" : "gh_api_slurp_with_jq",
+    "eventIds" : [ "event-0016" ]
+  }, {
+    "id" : "problem-5-30-2274",
+    "recurrenceSignature" : "playwright_browser_not_installed",
+    "eventIds" : [ "event-0017" ]
+  }, {
+    "id" : "problem-5-30-2403",
+    "recurrenceSignature" : "functional_test_harness_error",
+    "eventIds" : [ "event-0018", "event-0019" ]
+  }, {
+    "id" : "problem-5-30-2807",
+    "recurrenceSignature" : "gh_pr_view_comments_with_json",
+    "eventIds" : [ "event-0020" ]
+  }, {
+    "id" : "problem-review-4128478304",
+    "recurrenceSignature" : "ccra_actionable_comment",
+    "eventIds" : [ "event-0021" ]
+  }, {
+    "id" : "problem-review-4128478338",
+    "recurrenceSignature" : "ccra_actionable_comment",
+    "eventIds" : [ "event-0022" ]
+  }, {
+    "id" : "problem-5-40-985",
+    "recurrenceSignature" : "unsupported_source_level_for_selected_jdk",
+    "eventIds" : [ "event-0023", "event-0024" ]
+  }, {
+    "id" : "problem-6-30-85",
+    "recurrenceSignature" : "invalid_remote_resource_lookup",
+    "eventIds" : [ "event-0001" ]
+  }, {
+    "id" : "problem-6-30-2074",
+    "recurrenceSignature" : "functional_test_harness_error",
+    "eventIds" : [ "event-0002" ]
+  }, {
+    "id" : "problem-6-30-2182",
+    "recurrenceSignature" : "functional_test_harness_error",
+    "eventIds" : [ "event-0003" ]
+  }, {
+    "id" : "problem-6-30-2278",
+    "recurrenceSignature" : "acceptance_leftover_state",
+    "eventIds" : [ "event-0004" ]
+  }, {
+    "id" : "problem-6-30-2449",
+    "recurrenceSignature" : "maven_unavailable_plugin_prefix",
+    "eventIds" : [ "event-0005", "event-0006" ]
+  }, {
+    "id" : "problem-6-40-512",
+    "recurrenceSignature" : "gh_api_wrong_argument_count",
+    "eventIds" : [ "event-0009" ]
+  } ],
+  "recurrenceSignatures" : [ {
+    "signature" : "acceptance_leftover_state",
+    "occurrenceCount" : 1,
+    "eventIds" : [ "event-0004" ],
+    "sessions" : [ "51992c93-8b5e-443a-8aa4-aa8dfbe34233" ]
+  }, {
+    "signature" : "ccra_actionable_comment",
+    "occurrenceCount" : 2,
+    "eventIds" : [ "event-0021", "event-0022" ],
+    "sessions" : [ "b1d8e363-6678-4eb2-a0f8-7aa8699647d4" ]
+  }, {
+    "signature" : "functional_test_harness_error",
+    "occurrenceCount" : 4,
+    "eventIds" : [ "event-0018", "event-0019", "event-0002", "event-0003" ],
+    "sessions" : [ "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d", "51992c93-8b5e-443a-8aa4-aa8dfbe34233" ]
+  }, {
+    "signature" : "gh_api_slurp_with_jq",
+    "occurrenceCount" : 3,
+    "eventIds" : [ "event-0015", "event-0011", "event-0016" ],
+    "sessions" : [ "23158692-6edd-475e-9b01-d3d30d976db3", "7b849cde-247c-450d-bc9c-131ca9519e55", "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d" ]
+  }, {
+    "signature" : "gh_api_wrong_argument_count",
+    "occurrenceCount" : 1,
+    "eventIds" : [ "event-0009" ],
+    "sessions" : [ "1afcc786-9f86-4ae0-9717-bb9817f28ed6" ]
+  }, {
+    "signature" : "gh_pr_view_comments_with_json",
+    "occurrenceCount" : 3,
+    "eventIds" : [ "event-0008", "event-0012", "event-0020" ],
+    "sessions" : [ "c9f4cee0-fc22-4ffb-9dc4-04ec8976c188", "7b849cde-247c-450d-bc9c-131ca9519e55", "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d" ]
+  }, {
+    "signature" : "invalid_remote_resource_lookup",
+    "occurrenceCount" : 4,
+    "eventIds" : [ "event-0013", "event-0014", "event-0010", "event-0001" ],
+    "sessions" : [ "23158692-6edd-475e-9b01-d3d30d976db3", "7b849cde-247c-450d-bc9c-131ca9519e55", "51992c93-8b5e-443a-8aa4-aa8dfbe34233" ]
+  }, {
+    "signature" : "maven_unavailable_plugin_prefix",
+    "occurrenceCount" : 2,
+    "eventIds" : [ "event-0005", "event-0006" ],
+    "sessions" : [ "51992c93-8b5e-443a-8aa4-aa8dfbe34233" ]
+  }, {
+    "signature" : "playwright_browser_not_installed",
+    "occurrenceCount" : 1,
+    "eventIds" : [ "event-0017" ],
+    "sessions" : [ "ad2799ab-3dbf-4fdf-82cb-ba037576ae6d" ]
+  }, {
+    "signature" : "stage_30_change_request",
+    "occurrenceCount" : 1,
+    "eventIds" : [ "event-0007" ],
+    "sessions" : [ "c9f4cee0-fc22-4ffb-9dc4-04ec8976c188" ]
+  }, {
+    "signature" : "unsupported_source_level_for_selected_jdk",
+    "occurrenceCount" : 2,
+    "eventIds" : [ "event-0023", "event-0024" ],
+    "sessions" : [ "b1d8e363-6678-4eb2-a0f8-7aa8699647d4" ]
+  } ],
+  "productDefects" : [ {
+    "id" : "defect-1",
+    "taskIssue" : 3,
+    "prNumber" : 8,
+    "categorySubtype" : "completeness_gap",
+    "summary" : "Missing facade test: Add `src/test/java/org/eclipse/cargotracker/interfaces/booking/facade/internal/DefaultBookingServiceFacadeTest.java` without new dependencies. Prove that `changeDeadline` converts the tracking string to an equivalent `TrackingId`, passes the same `Date` instance/value, delegates\n…",
+    "firstDetection" : {
+      "eventId" : "event-0007",
+      "shepherdStage" : 30,
+      "detectionGate" : "stage_30_gate",
+      "timestamp" : "2026-09-29T00:00:08Z",
+      "headSha" : "f473d94d9e1011f19488038d7f7326b320ad5022"
+    },
+    "occurrenceEventIds" : [ "event-0007" ],
+    "resolution" : {
+      "status" : "fixed",
+      "commit" : "db3827c4c49282e36ed3a56970fb2052f0dfe695",
+      "fixedAt" : "2026-09-29T00:00:19Z",
+      "timeToFixSeconds" : 11
+    },
+    "occurrenceCount" : 1
+  }, {
+    "id" : "defect-2",
+    "taskIssue" : 5,
+    "prNumber" : 10,
+    "categorySubtype" : "behavioral_defect",
+    "summary" : "PrimeFaces 8 falls back to processing `@all` when `process` is omitted. If the required deadline is cleared, clicking Cancel therefore triggers validation and never reaches `cancel()`, leaving the dialog impossible to dismiss. Process only the button for this action.",
+    "firstDetection" : {
+      "eventId" : "event-0021",
+      "shepherdStage" : 40,
+      "detectionGate" : "ccra_review",
+      "timestamp" : "2026-09-29T00:47:41Z",
+      "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87"
+    },
+    "occurrenceEventIds" : [ "event-0021" ],
+    "resolution" : {
+      "status" : "fixed",
+      "commit" : "d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf",
+      "fixedAt" : "2026-09-29T00:49:50Z",
+      "timeToFixSeconds" : 129
+    },
+    "occurrenceCount" : 1
+  }, {
+    "id" : "defect-3",
+    "taskIssue" : 5,
+    "prNumber" : 10,
+    "categorySubtype" : "behavioral_defect",
+    "summary" : "The required validator can reject an empty value, but this Ajax button has no update target, so the newly queued `p:message` is not rendered and the user gets no validation feedback. Re-render the form (or the message component) after submission.",
+    "firstDetection" : {
+      "eventId" : "event-0022",
+      "shepherdStage" : 40,
+      "detectionGate" : "ccra_review",
+      "timestamp" : "2026-09-29T00:47:41Z",
+      "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87"
+    },
+    "occurrenceEventIds" : [ "event-0022" ],
+    "resolution" : {
+      "status" : "fixed",
+      "commit" : "d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf",
+      "fixedAt" : "2026-09-29T00:49:50Z",
+      "timeToFixSeconds" : 129
+    },
+    "occurrenceCount" : 1
+  } ],
+  "transitions" : [ {
+    "timestamp" : "2026-09-28T23:46:36Z",
+    "headSha" : "702ee54ca1fa603560d54b86e29b654151869a77",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-28T23:46:36Z",
+    "headSha" : "fb1c577fe15f45c80656df7664df0e9be1bd65d0",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-28T23:46:43Z",
+    "headSha" : null,
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-28T23:48:01Z",
+    "headSha" : "702ee54ca1fa603560d54b86e29b654151869a77",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "git remote -v && git status --short --branch && gh pr view 7 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,reviewDecision,statusCheckRollup,url",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:01:30Z",
+    "headSha" : null,
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:01:41Z",
+    "headSha" : "db3827c4c49282e36ed3a56970fb2052f0dfe695",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:01:41Z",
+    "headSha" : "db3827c4c49282e36ed3a56970fb2052f0dfe695",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:01:41Z",
+    "headSha" : null,
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:04:32Z",
+    "headSha" : "db3827c4c49282e36ed3a56970fb2052f0dfe695",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "git remote get-url origin && git rev-parse --show-toplevel && gh pr view 8 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,statusCheckRollup,title,url && gh issue view 3 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --j\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:17:35Z",
+    "headSha" : null,
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:18:06Z",
+    "headSha" : "b58e11722a0ca422d35adec70c9f4bd54041c85f",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:18:06Z",
+    "headSha" : "b58e11722a0ca422d35adec70c9f4bd54041c85f",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=${HOME}/Downloads/apache-ant-1.10.13 M2_HOME=${HOME}/Downloads/apache-maven-3.9.8; export PATH=${APPCAT_HOME}:\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:21:07Z",
+    "headSha" : "b58e11722a0ca422d35adec70c9f4bd54041c85f",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "git remote -v && printf '\\nPR\\n' && gh pr view 9 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,reviewDecision,statusCheckRollup,url && printf '\\nISSUE\\n' && gh issue view 4 -R edburns/dd-3070518-cargotracker-darwin-arm64-0\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:36:04Z",
+    "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=\"$HOME/Downloads/apache-ant-1.10.13\" M2_HOME=\"$HOME/Downloads/apache-maven-3.9.8\"; export PATH=\"$APPCAT_HOME:$\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:36:04Z",
+    "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "export IDEA_HOME=\"/Applications/IntelliJ IDEA CE.app/Contents/MacOS\" APPCAT_HOME=/Users/edburns/.appcat JAVA_HOME=\"/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home\" ANT_HOME=\"$HOME/Downloads/apache-ant-1.10.13\" M2_HOME=\"$HOME/Downloads/apache-maven-3.9.8\"; export PATH=\"$APPCAT_HOME:$\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:42:41Z",
+    "headSha" : "d158abe15af97b22a7a3d234fab83c0bd6dbab87",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "git remote get-url origin && git status --short --branch && gh pr view 10 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,reviewDecision,statusCheckRollup,url",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:49:50Z",
+    "headSha" : "d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "set +e\ngh pr checks 10 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --watch\nWATCH_STATUS=$?\necho \"WATCH_STATUS=$WATCH_STATUS\"\ngh pr view 10 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json headRefOid,statusCheckRollup --jq '{headRefOid,checks:[.statusCheckRollup[]|{name,status,conclus\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T00:52:09Z",
+    "headSha" : "d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "set -euo pipefail\nREPO='edburns/dd-3070518-cargotracker-darwin-arm64-01'; PR_NUMBER=10; BASE_BRANCH='experiment/shepherd-control'; EXPECTED_REVIEW_ID=5346407288\n[ \"$BASE_BRANCH\" != main ] || { echo \"ERROR: BASE_BRANCH must never be main\"; exit 1; }\nPR=$(gh pr view \"$PR_NUMBER\" -R \"$REPO\" --json stat\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T01:57:54Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "gh run view 36505761183 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json headSha,status,conclusion,name,event,jobs,url",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T01:57:54Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "gh run view 36505761183 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json headSha,status,conclusion,name,event,jobs,url",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T01:57:54Z",
+    "headSha" : null,
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "gh api 'repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/commits/a56afb39ab5771afd255b8962ea4e10a39af0347/check-runs?per_page=100' --paginate --slurp | jq '[.[].check_runs[] | {name,status,conclusion,head_sha,details_url}]'",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T02:01:38Z",
+    "headSha" : null,
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "gh api 'repos/edburns/dd-3070518-cargotracker-darwin-arm64-01/commits/a56afb39ab5771afd255b8962ea4e10a39af0347/check-runs?per_page=100' --paginate --slurp | jq '{pending:[.[].check_runs[]|select(.status!=\"completed\")|.name],failing:[.[].check_runs[]|select(.status==\"completed\" and (.conclusion!=\"suc\n…",
+    "greenToRed" : false
+  }, {
+    "timestamp" : "2026-09-29T02:06:28Z",
+    "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+    "check" : "Shepherd task Cargo Tracker",
+    "result" : "success",
+    "agentAction" : "git remote get-url origin && git rev-parse --show-toplevel && gh pr view 11 -R edburns/dd-3070518-cargotracker-darwin-arm64-01 --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,reviewDecision,statusCheckRollup,url",
+    "greenToRed" : false
+  } ],
+  "hallucinationSignals" : {
+    "productCode" : {
+      "eventCount" : 0,
+      "distinctSignatureCount" : 0,
+      "evidenceIds" : [ ]
+    },
+    "tooling" : {
+      "eventCount" : 8,
+      "distinctSignatureCount" : 4,
+      "evidenceIds" : [ "event-0015", "event-0008", "event-0011", "event-0012", "event-0016", "event-0020", "event-0005", "event-0009" ]
+    }
+  },
+  "convergence" : {
+    "reviewRounds" : 6,
+    "ccraActionableComments" : 2,
+    "fixCommits" : 1,
+    "stage30Remediations" : 1,
+    "ciRuns" : 8,
+    "ciRerunsSameHead" : 0,
+    "ciObservationCount" : 23,
+    "ciRunCountingMethod" : "Distinct substantive check head SHAs; repeated transcript observations are not reruns.",
+    "reviewCapEvents" : 0,
+    "timeoutEvents" : 0,
+    "idleKillEvents" : 0,
+    "ccaWait" : {
+      "pollCount" : 17,
+      "elapsedSeconds" : 2958,
+      "configuredPollCeilingSeconds" : 3060,
+      "elapsedMethod" : "Transcript offset from remote background-shell start to its completed read_bash block.",
+      "shareOfRecordedSessionTime" : 0.3789392774788624,
+      "interpretation" : "Elapsed local waiting proxy; not CCA execution cost or remote-agent telemetry."
+    },
+    "flakiness" : {
+      "flakyTestFailures" : 0,
+      "flakyUnitTestFailures" : 0,
+      "flakyArquillianContainerTestFailures" : 0,
+      "leftoverStateFailures" : 1,
+      "otherKnownCauseFailures" : 0,
+      "unknownCauseFailures" : 0
+    }
+  },
+  "cost" : {
+    "aiu" : {
+      "value" : 786.75444,
+      "availability" : "measured",
+      "method" : "Final session.usage_checkpoint totalNanoAiu per phase session.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 10,
+      "availability" : "measured",
+      "method" : "Final totalPremiumRequests checkpoint per phase session.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "input" : {
+        "value" : 8143155,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "output" : {
+        "value" : 102885,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheRead" : {
+        "value" : 7588116,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "cacheWrite" : {
+        "value" : 554442,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "reasoning" : {
+        "value" : 18919,
+        "availability" : "measured",
+        "method" : "Last cumulative OTEL export per metric attribute set per file.",
+        "evidenceIds" : [ ]
+      },
+      "uncachedInput" : {
+        "value" : 597,
+        "availability" : "derived",
+        "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+        "evidenceIds" : [ ]
+      },
+      "inputIncludesCacheTokens" : true
+    },
+    "inferenceCalls" : {
+      "value" : 199,
+      "availability" : "measured",
+      "method" : "model.call_start count.",
+      "evidenceIds" : [ ]
+    },
+    "toolCalls" : {
+      "value" : 299,
+      "availability" : "measured",
+      "method" : "tool.execution_complete count.",
+      "evidenceIds" : [ ]
+    },
+    "byShepherdStage" : {
+      "30" : {
+        "aiu" : {
+          "value" : 568.02158,
+          "availability" : "measured",
+          "method" : "Usage checkpoints.",
+          "evidenceIds" : [ ]
+        },
+        "premiumRequests" : {
+          "value" : 5,
+          "availability" : "measured",
+          "method" : "Usage checkpoints.",
+          "evidenceIds" : [ ]
+        },
+        "tokens" : {
+          "input" : {
+            "value" : 6304391,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "output" : {
+            "value" : 73177,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "cacheRead" : {
+            "value" : 5935837,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "cacheWrite" : {
+            "value" : 368125,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "reasoning" : {
+            "value" : 15154,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "uncachedInput" : {
+            "value" : 429,
+            "availability" : "derived",
+            "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+            "evidenceIds" : [ ]
+          },
+          "inputIncludesCacheTokens" : true
+        },
+        "inferenceCalls" : {
+          "value" : 143,
+          "availability" : "measured",
+          "method" : "JSONL events.",
+          "evidenceIds" : [ ]
+        },
+        "toolCalls" : {
+          "value" : 228,
+          "availability" : "measured",
+          "method" : "JSONL events.",
+          "evidenceIds" : [ ]
+        },
+        "recordedWallTimeSeconds" : {
+          "value" : 6528,
+          "availability" : "measured",
+          "method" : "Transcript headers.",
+          "evidenceIds" : [ ]
+        }
+      },
+      "40" : {
+        "aiu" : {
+          "value" : 218.73286,
+          "availability" : "measured",
+          "method" : "Usage checkpoints.",
+          "evidenceIds" : [ ]
+        },
+        "premiumRequests" : {
+          "value" : 5,
+          "availability" : "measured",
+          "method" : "Usage checkpoints.",
+          "evidenceIds" : [ ]
+        },
+        "tokens" : {
+          "input" : {
+            "value" : 1838764,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "output" : {
+            "value" : 29708,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "cacheRead" : {
+            "value" : 1652279,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "cacheWrite" : {
+            "value" : 186317,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "reasoning" : {
+            "value" : 3765,
+            "availability" : "measured",
+            "method" : "Last cumulative OTEL export per metric attribute set per file.",
+            "evidenceIds" : [ ]
+          },
+          "uncachedInput" : {
+            "value" : 168,
+            "availability" : "derived",
+            "method" : "Input tokens include cache-read and cache-write tokens; this subtracts both.",
+            "evidenceIds" : [ ]
+          },
+          "inputIncludesCacheTokens" : true
+        },
+        "inferenceCalls" : {
+          "value" : 56,
+          "availability" : "measured",
+          "method" : "JSONL events.",
+          "evidenceIds" : [ ]
+        },
+        "toolCalls" : {
+          "value" : 71,
+          "availability" : "measured",
+          "method" : "JSONL events.",
+          "evidenceIds" : [ ]
+        },
+        "recordedWallTimeSeconds" : {
+          "value" : 1278,
+          "availability" : "measured",
+          "method" : "Transcript headers.",
+          "evidenceIds" : [ ]
+        }
+      }
+    }
+  },
+  "environment" : {
+    "sessions" : [ {
+      "taskIssue" : 2,
+      "shepherdStage" : 30,
+      "javaHomesUsed" : [ "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home", "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home" ],
+      "javacSourceTargetReleaseLevels" : [ "1.7" ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ {
+        "line" : 784,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      } ]
+    }, {
+      "taskIssue" : 2,
+      "shepherdStage" : 40,
+      "javaHomesUsed" : [ ],
+      "javacSourceTargetReleaseLevels" : [ ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ ]
+    }, {
+      "taskIssue" : 3,
+      "shepherdStage" : 30,
+      "javaHomesUsed" : [ "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home", "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home" ],
+      "javacSourceTargetReleaseLevels" : [ "1.7" ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ {
+        "line" : 1202,
+        "executable" : "java",
+        "javaHome" : null,
+        "availability" : "unavailable"
+      }, {
+        "line" : 1236,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      }, {
+        "line" : 1336,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      } ]
+    }, {
+      "taskIssue" : 3,
+      "shepherdStage" : 40,
+      "javaHomesUsed" : [ ],
+      "javacSourceTargetReleaseLevels" : [ ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ ]
+    }, {
+      "taskIssue" : 4,
+      "shepherdStage" : 30,
+      "javaHomesUsed" : [ "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home", "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home" ],
+      "javacSourceTargetReleaseLevels" : [ "1.7" ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ {
+        "line" : 741,
+        "executable" : "java",
+        "javaHome" : null,
+        "availability" : "unavailable"
+      }, {
+        "line" : 871,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      }, {
+        "line" : 1174,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      } ]
+    }, {
+      "taskIssue" : 4,
+      "shepherdStage" : 40,
+      "javaHomesUsed" : [ "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home" ],
+      "javacSourceTargetReleaseLevels" : [ ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ ]
+    }, {
+      "taskIssue" : 5,
+      "shepherdStage" : 30,
+      "javaHomesUsed" : [ "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home", "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home" ],
+      "javacSourceTargetReleaseLevels" : [ "1.7" ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ {
+        "line" : 2172,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      }, {
+        "line" : 2538,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      } ]
+    }, {
+      "taskIssue" : 5,
+      "shepherdStage" : 40,
+      "javaHomesUsed" : [ "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home" ],
+      "javacSourceTargetReleaseLevels" : [ "1.7" ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ {
+        "line" : 985,
+        "executable" : "mvn",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home",
+        "availability" : "measured"
+      } ]
+    }, {
+      "taskIssue" : 6,
+      "shepherdStage" : 30,
+      "javaHomesUsed" : [ "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home", "/Library/Java/JavaVirtualMachines/microsoft-25.jdk/Contents/Home" ],
+      "javacSourceTargetReleaseLevels" : [ "1.7" ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ {
+        "line" : 1169,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      }, {
+        "line" : 2449,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      }, {
+        "line" : 2508,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      }, {
+        "line" : 2559,
+        "executable" : "./mvnw",
+        "javaHome" : "/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home",
+        "availability" : "measured"
+      } ]
+    }, {
+      "taskIssue" : 6,
+      "shepherdStage" : 40,
+      "javaHomesUsed" : [ ],
+      "javacSourceTargetReleaseLevels" : [ ],
+      "modelIds" : [ "gpt-5.6-sol" ],
+      "reasoningLevels" : [ "medium" ],
+      "copilotCliVersions" : [ "1.0.89" ],
+      "javaInvocations" : [ ]
+    } ]
+  },
+  "runInvariants" : {
+    "shepherdTaskVersion" : "1.0.4",
+    "campaignCreatedWithVersion" : "1.0.4",
+    "models" : [ "gpt-5.6-sol" ],
+    "reasoningLevels" : [ "medium" ],
+    "copilotCliVersions" : [ "1.0.89" ],
+    "skillNameHashes" : {
+      "shepherd-task-30-from-assignment-to-ready" : [ "fbbe9ff2b50b3d9ff07cc3ee1f70a821b5ede177540547826ee1daccefd15c0f" ],
+      "shepherd-task-40-from-ready-to-merged-to-base" : [ "389092470a5d503c169008dad0087ab6a0636e9ebbed84bf61fc03028754223f" ],
+      "shepherd-task-approve-workflows-and-wait-for-completion" : [ "3f03ccb0c9eca74099e017889b591316cacc8ce5485df85526d1a73c6be0304b" ]
+    },
+    "skillContentLengths" : {
+      "shepherd-task-30-from-assignment-to-ready" : [ 25804 ],
+      "shepherd-task-40-from-ready-to-merged-to-base" : [ 18417 ],
+      "shepherd-task-approve-workflows-and-wait-for-completion" : [ 4423 ]
+    },
+    "skillContentVerification" : {
+      "status" : "unverified",
+      "availability" : "unavailable",
+      "expectedArtifact" : "shepherd-task-skill-content-hashes.json",
+      "fallback" : "Telemetry provides skill name hashes and content lengths only."
+    },
+    "loadedSkills" : [ "airunway-aks-setup", "appinsights-instrumentation", "azure-ai", "azure-aigateway", "azure-cloud-migrate", "azure-compliance", "azure-compute", "azure-cost", "azure-deploy", "azure-diagnostics", "azure-enterprise-infra-planner", "azure-kubernetes", "azure-kusto", "azure-messaging", "azure-prepare", "azure-quotas", "azure-rbac", "azure-reliability", "azure-resource-lookup", "azure-resource-visualizer", "azure-storage", "azure-upgrade", "azure-validate", "customize-cloud-agent", "entra-agent-id", "entra-app-registration", "github-pr-media", "microsoft-foundry", "python-appservice-deploy", "shepherd-task-10-create-ignorance-reduction-plan", "shepherd-task-20-create-issues-from-plan", "shepherd-task-30-from-assignment-to-ready", "shepherd-task-40-from-ready-to-merged-to-base", "shepherd-task-50-create-post-mortem", "shepherd-task-approve-workflows-and-wait-for-completion" ],
+    "loadedSkillCount" : 35,
+    "allSessionsSameModel" : true,
+    "allSessionsSameReasoningLevel" : true
+  },
+  "ciAnalysis" : {
+    "observedCheckNames" : [ "Shepherd task Cargo Tracker" ],
+    "substantiveCheckNames" : [ "Shepherd task Cargo Tracker" ],
+    "excludedOrchestrationChecks" : [ "Running Copilot cloud agent" ],
+    "remoteAgentCheckObservations" : 1,
+    "testsSkippedMessages" : 6,
+    "ciTestsSkippedMessages" : 1,
+    "testExecution" : {
+      "availability" : "measured",
+      "testsExecuted" : false,
+      "testsRun" : 0,
+      "source" : "CI transcript log contains 'Tests are skipped.'"
+    },
+    "testsRunByDefault" : false,
+    "controlCiInterpretation" : "compile_only_zero_tests_by_default"
+  },
+  "interpretationNotes" : [ "Detection stage should be presented per defect and descriptively; a small number of product defects per run does not support significance claims.", "Local AIU and tokens include Shepherd waiting/polling activity; CCA wait is reported separately because remote CCA internals are unavailable.", "Enabling tests in the treatment is a disclosed intervention, not evaluator-detected control-arm tampering.", "If the treatment raises the Java release level, disclose that it also removes the JDK-25/source-7 operational failure mode." ],
+  "humanInterventions" : [ ],
+  "repositoryAnalysis" : {
+    "availability" : "measured",
+    "startSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+    "finalSha" : "4cd369908f089830bbab701632d321f0b122aa43",
+    "tasks" : [ {
+      "taskIssue" : 2,
+      "prNumber" : 7,
+      "baseSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+      "headSha" : "702ee54ca1fa603560d54b86e29b654151869a77",
+      "mergeSha" : "de7289b3d6728c28cc2f6e41c239fed2162c1e63",
+      "diff" : {
+        "files" : 3,
+        "additions" : 49,
+        "deletions" : 0,
+        "commits" : 2,
+        "buildFilesChanged" : 0,
+        "dependencyChurnLines" : 0,
+        "split" : {
+          "production" : {
+            "files" : 2,
+            "additions" : 17,
+            "deletions" : 0
+          },
+          "test" : {
+            "files" : 1,
+            "additions" : 32,
+            "deletions" : 0
+          },
+          "config" : {
+            "files" : 0,
+            "additions" : 0,
+            "deletions" : 0
+          }
+        }
+      },
+      "reviewCommentsPer100ChangedLines" : {
+        "value" : 0,
+        "availability" : "derived",
+        "method" : "CCRA comments / changed lines * 100.",
+        "evidenceIds" : [ ]
+      },
+      "testIntegrity" : {
+        "baseline" : {
+          "startSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+          "testsRunByDefault" : false,
+          "skipTests" : true,
+          "mavenCompilerSource" : "1.7",
+          "mavenCompilerTarget" : "1.7",
+          "mavenCompilerRelease" : null,
+          "testExecutionMode" : "compiled_but_not_executed",
+          "containerTestTarget" : "remote_payara"
+        },
+        "meaningfulness" : {
+          "status" : "not_meaningful",
+          "reason" : "The control arm did not run tests by default at its start SHA."
+        },
+        "changes" : {
+          "testFilesModified" : 1,
+          "testFilesDeleted" : 0,
+          "disabledAnnotationsAdded" : 0,
+          "skipFlagsAdded" : 0,
+          "skipFlagsRemoved" : 0,
+          "testExclusionsAdded" : 0,
+          "assertionsAdded" : 12,
+          "assertionsRemoved" : 0,
+          "ciTestCommandsChanged" : 0
+        },
+        "tamperingSignals" : [ ]
+      }
+    }, {
+      "taskIssue" : 3,
+      "prNumber" : 8,
+      "baseSha" : "de7289b3d6728c28cc2f6e41c239fed2162c1e63",
+      "headSha" : "db3827c4c49282e36ed3a56970fb2052f0dfe695",
+      "mergeSha" : "bc09809ce0ae061851cbb411b216d966ebcee6a2",
+      "diff" : {
+        "files" : 3,
+        "additions" : 82,
+        "deletions" : 0,
+        "commits" : 3,
+        "buildFilesChanged" : 0,
+        "dependencyChurnLines" : 0,
+        "split" : {
+          "production" : {
+            "files" : 2,
+            "additions" : 7,
+            "deletions" : 0
+          },
+          "test" : {
+            "files" : 1,
+            "additions" : 75,
+            "deletions" : 0
+          },
+          "config" : {
+            "files" : 0,
+            "additions" : 0,
+            "deletions" : 0
+          }
+        }
+      },
+      "reviewCommentsPer100ChangedLines" : {
+        "value" : 0,
+        "availability" : "derived",
+        "method" : "CCRA comments / changed lines * 100.",
+        "evidenceIds" : [ ]
+      },
+      "testIntegrity" : {
+        "baseline" : {
+          "startSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+          "testsRunByDefault" : false,
+          "skipTests" : true,
+          "mavenCompilerSource" : "1.7",
+          "mavenCompilerTarget" : "1.7",
+          "mavenCompilerRelease" : null,
+          "testExecutionMode" : "compiled_but_not_executed",
+          "containerTestTarget" : "remote_payara"
+        },
+        "meaningfulness" : {
+          "status" : "not_meaningful",
+          "reason" : "The control arm did not run tests by default at its start SHA."
+        },
+        "changes" : {
+          "testFilesModified" : 2,
+          "testFilesDeleted" : 0,
+          "disabledAnnotationsAdded" : 0,
+          "skipFlagsAdded" : 0,
+          "skipFlagsRemoved" : 0,
+          "testExclusionsAdded" : 0,
+          "assertionsAdded" : 15,
+          "assertionsRemoved" : 0,
+          "ciTestCommandsChanged" : 0
+        },
+        "tamperingSignals" : [ ]
+      }
+    }, {
+      "taskIssue" : 4,
+      "prNumber" : 9,
+      "baseSha" : "bc09809ce0ae061851cbb411b216d966ebcee6a2",
+      "headSha" : "b58e11722a0ca422d35adec70c9f4bd54041c85f",
+      "mergeSha" : "c1b1dbf2e52c620b1ee3d3a0a6e14c26cf48753b",
+      "diff" : {
+        "files" : 2,
+        "additions" : 279,
+        "deletions" : 0,
+        "commits" : 3,
+        "buildFilesChanged" : 0,
+        "dependencyChurnLines" : 0,
+        "split" : {
+          "production" : {
+            "files" : 1,
+            "additions" : 69,
+            "deletions" : 0
+          },
+          "test" : {
+            "files" : 1,
+            "additions" : 210,
+            "deletions" : 0
+          },
+          "config" : {
+            "files" : 0,
+            "additions" : 0,
+            "deletions" : 0
+          }
+        }
+      },
+      "reviewCommentsPer100ChangedLines" : {
+        "value" : 0,
+        "availability" : "derived",
+        "method" : "CCRA comments / changed lines * 100.",
+        "evidenceIds" : [ ]
+      },
+      "testIntegrity" : {
+        "baseline" : {
+          "startSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+          "testsRunByDefault" : false,
+          "skipTests" : true,
+          "mavenCompilerSource" : "1.7",
+          "mavenCompilerTarget" : "1.7",
+          "mavenCompilerRelease" : null,
+          "testExecutionMode" : "compiled_but_not_executed",
+          "containerTestTarget" : "remote_payara"
+        },
+        "meaningfulness" : {
+          "status" : "not_meaningful",
+          "reason" : "The control arm did not run tests by default at its start SHA."
+        },
+        "changes" : {
+          "testFilesModified" : 3,
+          "testFilesDeleted" : 0,
+          "disabledAnnotationsAdded" : 0,
+          "skipFlagsAdded" : 0,
+          "skipFlagsRemoved" : 0,
+          "testExclusionsAdded" : 0,
+          "assertionsAdded" : 30,
+          "assertionsRemoved" : 0,
+          "ciTestCommandsChanged" : 0
+        },
+        "tamperingSignals" : [ ]
+      }
+    }, {
+      "taskIssue" : 5,
+      "prNumber" : 10,
+      "baseSha" : "c1b1dbf2e52c620b1ee3d3a0a6e14c26cf48753b",
+      "headSha" : "d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf",
+      "mergeSha" : "3116bc90aa3e5fc868ae67866ea96adfbae48875",
+      "diff" : {
+        "files" : 2,
+        "additions" : 86,
+        "deletions" : 0,
+        "commits" : 3,
+        "buildFilesChanged" : 0,
+        "dependencyChurnLines" : 0,
+        "split" : {
+          "production" : {
+            "files" : 2,
+            "additions" : 86,
+            "deletions" : 0
+          },
+          "test" : {
+            "files" : 0,
+            "additions" : 0,
+            "deletions" : 0
+          },
+          "config" : {
+            "files" : 0,
+            "additions" : 0,
+            "deletions" : 0
+          }
+        }
+      },
+      "reviewCommentsPer100ChangedLines" : {
+        "value" : 2.326,
+        "availability" : "derived",
+        "method" : "CCRA comments / changed lines * 100.",
+        "evidenceIds" : [ ]
+      },
+      "testIntegrity" : {
+        "baseline" : {
+          "startSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+          "testsRunByDefault" : false,
+          "skipTests" : true,
+          "mavenCompilerSource" : "1.7",
+          "mavenCompilerTarget" : "1.7",
+          "mavenCompilerRelease" : null,
+          "testExecutionMode" : "compiled_but_not_executed",
+          "containerTestTarget" : "remote_payara"
+        },
+        "meaningfulness" : {
+          "status" : "not_meaningful",
+          "reason" : "The control arm did not run tests by default at its start SHA."
+        },
+        "changes" : {
+          "testFilesModified" : 3,
+          "testFilesDeleted" : 0,
+          "disabledAnnotationsAdded" : 0,
+          "skipFlagsAdded" : 0,
+          "skipFlagsRemoved" : 0,
+          "testExclusionsAdded" : 0,
+          "assertionsAdded" : 30,
+          "assertionsRemoved" : 0,
+          "ciTestCommandsChanged" : 0
+        },
+        "tamperingSignals" : [ ]
+      }
+    }, {
+      "taskIssue" : 6,
+      "prNumber" : 11,
+      "baseSha" : "3116bc90aa3e5fc868ae67866ea96adfbae48875",
+      "headSha" : "a56afb39ab5771afd255b8962ea4e10a39af0347",
+      "mergeSha" : "4cd369908f089830bbab701632d321f0b122aa43",
+      "diff" : {
+        "files" : 2,
+        "additions" : 13,
+        "deletions" : 2,
+        "commits" : 2,
+        "buildFilesChanged" : 0,
+        "dependencyChurnLines" : 0,
+        "split" : {
+          "production" : {
+            "files" : 2,
+            "additions" : 13,
+            "deletions" : 2
+          },
+          "test" : {
+            "files" : 0,
+            "additions" : 0,
+            "deletions" : 0
+          },
+          "config" : {
+            "files" : 0,
+            "additions" : 0,
+            "deletions" : 0
+          }
+        }
+      },
+      "reviewCommentsPer100ChangedLines" : {
+        "value" : 0,
+        "availability" : "derived",
+        "method" : "CCRA comments / changed lines * 100.",
+        "evidenceIds" : [ ]
+      },
+      "testIntegrity" : {
+        "baseline" : {
+          "startSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+          "testsRunByDefault" : false,
+          "skipTests" : true,
+          "mavenCompilerSource" : "1.7",
+          "mavenCompilerTarget" : "1.7",
+          "mavenCompilerRelease" : null,
+          "testExecutionMode" : "compiled_but_not_executed",
+          "containerTestTarget" : "remote_payara"
+        },
+        "meaningfulness" : {
+          "status" : "not_meaningful",
+          "reason" : "The control arm did not run tests by default at its start SHA."
+        },
+        "changes" : {
+          "testFilesModified" : 3,
+          "testFilesDeleted" : 0,
+          "disabledAnnotationsAdded" : 0,
+          "skipFlagsAdded" : 0,
+          "skipFlagsRemoved" : 0,
+          "testExclusionsAdded" : 0,
+          "assertionsAdded" : 30,
+          "assertionsRemoved" : 0,
+          "ciTestCommandsChanged" : 0
+        },
+        "tamperingSignals" : [ ]
+      }
+    } ],
+    "campaignDiff" : {
+      "files" : 12,
+      "additions" : 509,
+      "deletions" : 2,
+      "commits" : 18,
+      "buildFilesChanged" : 0,
+      "dependencyChurnLines" : 0,
+      "split" : {
+        "production" : {
+          "files" : 9,
+          "additions" : 192,
+          "deletions" : 2
+        },
+        "test" : {
+          "files" : 3,
+          "additions" : 317,
+          "deletions" : 0
+        },
+        "config" : {
+          "files" : 0,
+          "additions" : 0,
+          "deletions" : 0
+        }
+      }
+    },
+    "baselineVerification" : {
+      "baselineEnablementCommit" : "e7b651f",
+      "isAncestorOfStartSha" : true,
+      "diffStat" : ".github/workflows/shepherd-task-cargotracker.yml   |  22 +\n .mvn/wrapper/maven-wrapper.properties              |  19 +\n ...al-deadline-feature-ignorance-reduction-plan.md | 909 +++++++++++++++++++++\n .../campaign-lessons.md                            |   8 +\n .../shepherd-campaign.json                         |  16 +\n .../shepherd-test-experiment.json                  |   6 +\n README.md                                          |   6 +\n ...02-make-e7b651f-run-with-production-baseline.md | 365 +++++++++\n mvnw                                               | 259 ++++++\n mvnw.cmd                                           | 149 ++++\n pom.xml                                            |  91 ++-\n .../util/JsonMoxyConfigurationContextResolver.java |  26 -\n .../application/util/RestConfiguration.java        |  28 +-\n .../routing/ExternalRoutingService.java            |   8 +-\n src/main/liberty/config/bootstrap.properties       |   3 +\n src/main/liberty/config/server.xml                 | 104 +++\n src/main/webapp/WEB-INF/web.xml                    |   5 -\n .../webapp/admin/dialogs/changeDestination.xhtml   |  11 +-\n src/main/webapp/admin/route.xhtml                  |  14 +-\n src/main/webapp/admin/selectItinerary.xhtml        |  11 +-\n src/main/webapp/admin/show.xhtml                   |   8 +-\n .../application/BookingServiceTest.java            |   5 +-\n .../BookingServiceTestRestConfiguration.java       |  21 +-\n 23 files changed, 1997 insertions(+), 97 deletions(-)"
+    },
+    "testIntegrity" : {
+      "baseline" : {
+        "startSha" : "9deec1b5cbdf1666df1323473b3ca0f06ca2cfce",
+        "testsRunByDefault" : false,
+        "skipTests" : true,
+        "mavenCompilerSource" : "1.7",
+        "mavenCompilerTarget" : "1.7",
+        "mavenCompilerRelease" : null,
+        "testExecutionMode" : "compiled_but_not_executed",
+        "containerTestTarget" : "remote_payara"
+      },
+      "meaningfulness" : {
+        "status" : "not_meaningful",
+        "reason" : "The control arm did not run tests by default at its start SHA."
+      },
+      "changes" : {
+        "testFilesModified" : 3,
+        "testFilesDeleted" : 0,
+        "disabledAnnotationsAdded" : 0,
+        "skipFlagsAdded" : 0,
+        "skipFlagsRemoved" : 0,
+        "testExclusionsAdded" : 0,
+        "assertionsAdded" : 30,
+        "assertionsRemoved" : 0,
+        "ciTestCommandsChanged" : 0
+      },
+      "tamperingSignals" : [ ]
+    },
+    "dry" : {
+      "minimumTokens" : 100,
+      "baseline" : {
+        "availability" : "measured",
+        "productionBlocks" : 0,
+        "testBlocks" : 0,
+        "duplicatedLines" : 0,
+        "locations" : [ ]
+      },
+      "final" : {
+        "availability" : "measured",
+        "productionBlocks" : 1,
+        "testBlocks" : 0,
+        "duplicatedLines" : 14,
+        "locations" : [ {
+          "path" : "src/main/java/org/eclipse/cargotracker/interfaces/booking/web/ChangeArrivalDeadlineDateDialog.java",
+          "startLine" : 20,
+          "endLine" : 33,
+          "duplicatedLines" : 14
+        }, {
+          "path" : "src/main/java/org/eclipse/cargotracker/interfaces/booking/web/ChangeDestinationDialog.java",
+          "startLine" : 22,
+          "endLine" : 35,
+          "duplicatedLines" : 14
+        } ]
+      },
+      "newDuplication" : {
+        "productionBlocks" : 1,
+        "testBlocks" : 0,
+        "duplicatedLines" : 14
+      }
+    },
+    "buildWarnings" : {
+      "jdk" : "17",
+      "compilerLint" : "deprecation,removal",
+      "baseline" : {
+        "availability" : "measured",
+        "exitCode" : 0,
+        "warnings" : [ ],
+        "outputExcerpt" : "[INFO] Scanning for projects...\n[INFO] \n[INFO] -------------------< org.eclipse.ee4j:cargo-tracker >-------------------\n[INFO] Building Eclipse Cargo Tracker 1.0-SNAPSHOT\n[INFO]   from pom.xml\n[INFO] --------------------------------[ war ]---------------------------------\n[WARNING] The artifact fish.payara.arquillian:arquillian-payara-server-4-remote:jar:1.1 has been relocated to fish.payara.arquillian:arquillian-payara-server-remote:jar:1.1\n[INFO] \n[INFO] --- resources:3.3.1:resources (default-resources) @ cargo-tracker ---\n[INFO] Copying 5 resources from src/main/resources to target/classes\n[INFO] \n[INFO] --- compiler:3.13.0:compile (default-compile) @ cargo-tracker ---\n[INFO] Recompiling the module because of changed source code.\n[INFO] Compiling 95 source files with javac [debug target 1.7] to target/classes\n[WARNING] bootstrap class path not set in conjunction with -source 7\n[WARNING] source value 7 is obsolete and will be removed in a future release\n[WARNING] target value 7 is obsolete and will be removed in a future release\n[WARNING] To suppress warnings about obsolete options, use -Xlint:-options.\n[INFO] \n[INFO] --- resources:3.3.1:testResources (default-testResources) @ cargo-tracker ---\n[INFO] Copying 3 resources from src/test/resources to target/test-classes\n[INFO] \n[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ cargo-tracker ---\n[INFO] Recompiling the module because of changed dependency.\n[INFO] Compiling 11 source files with javac [debug target 1.7] to target/test-classes\n[WARNING] bootstrap class path not set in conjunction with -source 7\n[WARN\n…"
+      },
+      "final" : {
+        "availability" : "measured",
+        "exitCode" : 0,
+        "warnings" : [ ],
+        "outputExcerpt" : "[INFO] Scanning for projects...\n[INFO] \n[INFO] -------------------< org.eclipse.ee4j:cargo-tracker >-------------------\n[INFO] Building Eclipse Cargo Tracker 1.0-SNAPSHOT\n[INFO]   from pom.xml\n[INFO] --------------------------------[ war ]---------------------------------\n[WARNING] The artifact fish.payara.arquillian:arquillian-payara-server-4-remote:jar:1.1 has been relocated to fish.payara.arquillian:arquillian-payara-server-remote:jar:1.1\n[INFO] \n[INFO] --- resources:3.3.1:resources (default-resources) @ cargo-tracker ---\n[INFO] Copying 5 resources from src/main/resources to target/classes\n[INFO] \n[INFO] --- compiler:3.13.0:compile (default-compile) @ cargo-tracker ---\n[INFO] Recompiling the module because of changed source code.\n[INFO] Compiling 97 source files with javac [debug target 1.7] to target/classes\n[WARNING] bootstrap class path not set in conjunction with -source 7\n[WARNING] source value 7 is obsolete and will be removed in a future release\n[WARNING] target value 7 is obsolete and will be removed in a future release\n[WARNING] To suppress warnings about obsolete options, use -Xlint:-options.\n[INFO] \n[INFO] --- resources:3.3.1:testResources (default-testResources) @ cargo-tracker ---\n[INFO] Copying 3 resources from src/test/resources to target/test-classes\n[INFO] \n[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ cargo-tracker ---\n[INFO] Recompiling the module because of changed dependency.\n[INFO] Compiling 13 source files with javac [debug target 1.7] to target/test-classes\n[WARNING] bootstrap class path not set in conjunction with -source 7\n[WARN\n…"
+      },
+      "newWarnings" : [ ],
+      "newWarningCount" : 0
+    }
+  },
+  "postMortemAgent" : {
+    "availability" : "measured",
+    "aiu" : {
+      "value" : 109.9212,
+      "availability" : "measured",
+      "method" : "Post-mortem session usage checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "premiumRequests" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Post-mortem checkpoint.",
+      "evidenceIds" : [ ]
+    },
+    "inferenceCalls" : {
+      "value" : 13,
+      "availability" : "measured",
+      "method" : "Post-mortem JSONL.",
+      "evidenceIds" : [ ]
+    },
+    "toolCalls" : {
+      "value" : 51,
+      "availability" : "measured",
+      "method" : "Post-mortem JSONL.",
+      "evidenceIds" : [ ]
+    },
+    "externalLargeOutputReferences" : {
+      "value" : 1,
+      "availability" : "measured",
+      "method" : "Post-mortem JSONL.",
+      "evidenceIds" : [ ]
+    },
+    "tokens" : {
+      "value" : null,
+      "availability" : "unavailable",
+      "reason" : "No post-mortem OTEL artifact is present in the campaign directory.",
+      "evidenceIds" : [ ]
+    }
+  },
+  "unclassified" : [ ],
+  "reconciliation" : {
+    "profile" : "reference-control-campaign",
+    "metrics" : [ {
+      "metric" : "tasksMerged",
+      "expected" : 5,
+      "actual" : 5,
+      "matches" : true,
+      "explanation" : "Resolved stage-40 PRs from transcripts."
+    }, {
+      "metric" : "wallClockSeconds",
+      "expected" : 9240,
+      "actual" : 9240,
+      "matches" : true,
+      "explanation" : "Manifest completedAt minus startedAt."
+    }, {
+      "metric" : "recordedSessionSeconds",
+      "expected" : 7806,
+      "actual" : 7806,
+      "matches" : true,
+      "explanation" : "Sum of ten transcript header durations."
+    }, {
+      "metric" : "sessions",
+      "expected" : 10,
+      "actual" : 10,
+      "matches" : true,
+      "explanation" : "Phase task transcript count."
+    }, {
+      "metric" : "ccraRounds",
+      "expected" : 6,
+      "actual" : 6,
+      "matches" : true,
+      "explanation" : "Unique completed Copilot review IDs."
+    }, {
+      "metric" : "ccraActionableComments",
+      "expected" : 2,
+      "actual" : 2,
+      "matches" : true,
+      "explanation" : "Unique top-level comments in completed CCRA review batches."
+    }, {
+      "metric" : "stage30ChangeRequests",
+      "expected" : 1,
+      "actual" : 1,
+      "matches" : true,
+      "explanation" : "Unique CHANGES_REQUESTED review objects in stage 30."
+    }, {
+      "metric" : "aiu",
+      "expected" : 786.754,
+      "actual" : 786.754,
+      "matches" : true,
+      "explanation" : "Usage checkpoint total, rounded to three decimals."
+    }, {
+      "metric" : "premiumRequests",
+      "expected" : 10,
+      "actual" : 10,
+      "matches" : true,
+      "explanation" : "Usage checkpoint totals."
+    }, {
+      "metric" : "inputTokens",
+      "expected" : 8143155,
+      "actual" : 8143155,
+      "matches" : true,
+      "explanation" : "Last cumulative export per metric attribute set per file."
+    }, {
+      "metric" : "cacheReadTokens",
+      "expected" : 7588116,
+      "actual" : 7588116,
+      "matches" : true,
+      "explanation" : "Last cumulative export per metric attribute set per file."
+    }, {
+      "metric" : "cacheWriteTokens",
+      "expected" : 554442,
+      "actual" : 554442,
+      "matches" : true,
+      "explanation" : "Last cumulative export per metric attribute set per file."
+    }, {
+      "metric" : "outputTokens",
+      "expected" : 102885,
+      "actual" : 102885,
+      "matches" : true,
+      "explanation" : "Last cumulative export per metric attribute set per file."
+    }, {
+      "metric" : "reasoningTokens",
+      "expected" : 18919,
+      "actual" : 18919,
+      "matches" : true,
+      "explanation" : "Last cumulative export per metric attribute set per file."
+    }, {
+      "metric" : "nonzeroToolExits",
+      "expected" : 18,
+      "actual" : 18,
+      "matches" : true,
+      "explanation" : "Nonzero transcript shell terminators."
+    } ],
+    "allExpectedValuesMatched" : true
+  }
+}
