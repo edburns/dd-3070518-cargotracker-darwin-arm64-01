@@ -88,6 +88,14 @@ public class CampaignEvaluator {
             "Tests run:\\s*(\\d+),\\s*Failures:\\s*(\\d+),\\s*Errors:\\s*(\\d+),\\s*Skipped:\\s*(\\d+)");
     private static final Pattern ASSERTION = Pattern.compile(
             "\\b(?:assertEquals|assertSame|assertTrue|assertFalse|assertNull|assertNotNull|assertThat|assertThrows|fail)\\s*\\(");
+    private static final Pattern READ_BASH_DELAY = Pattern.compile(
+            "\"delay\"\\s*:\\s*(\\d+)");
+    private static final Pattern READ_BASH_SHELL = Pattern.compile(
+            "\"shellId\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern BACKGROUND_SHELL = Pattern.compile(
+            "<(?:command with )?shellId:\\s*([^\\s>]+)");
+    private static final Pattern JAVA_INVOCATION = Pattern.compile(
+            "(?m)(?:^|[;&|]\\s*|\\s)(\\./mvnw|mvn|java|javac)\\b");
 
     private final Config config;
     private final Path evaluatorDir;
@@ -161,6 +169,9 @@ public class CampaignEvaluator {
         root.set("convergence", aggregateConvergence(sessions));
         root.set("cost", traceCost);
         root.set("environment", aggregateEnvironment(sessions));
+        root.set("runInvariants", aggregateRunInvariants(manifest, sessions));
+        root.set("ciAnalysis", aggregateCiAnalysis(repository, sessions));
+        root.set("interpretationNotes", interpretationNotes());
         root.set("humanInterventions", aggregateHumanInterventions(sessions));
         root.set("repositoryAnalysis", repository);
         root.set("postMortemAgent", postMortem);
@@ -273,6 +284,7 @@ public class CampaignEvaluator {
         parseOtel(result);
         result.prNumber = parsePrNumber(transcript);
         parseTranscript(result, lines);
+        finalizeSessionEvidence(result, transcript);
         return result;
     }
 
@@ -331,6 +343,7 @@ public class CampaignEvaluator {
             return;
         }
         JsonNode lastUsage = null;
+        Map<String, String> toolNames = new HashMap<>();
         int userMessageIndex = 0;
         try (BufferedReader reader = Files.newBufferedReader(result.jsonl, StandardCharsets.UTF_8)) {
             String line;
@@ -347,15 +360,54 @@ public class CampaignEvaluator {
                 JsonNode data = event.path("data");
                 if ("session.usage_checkpoint".equals(type)) {
                     lastUsage = data;
+                } else if ("result".equals(type)) {
+                    result.jsonlDurationMs = event.path("usage")
+                            .path("sessionDurationMs").asLong();
+                    if (result.sessionId == null) {
+                        result.sessionId = event.path("sessionId").asText(null);
+                    }
                 } else if ("model.call_start".equals(type)) {
                     result.inferenceCalls++;
                     text(data, "model").ifPresent(result.models::add);
+                } else if ("tool.execution_start".equals(type)) {
+                    toolNames.put(data.path("toolCallId").asText(),
+                            data.path("toolName").asText(""));
+                } else if ("tool.execution_partial_result".equals(type)) {
+                    result.partialOutputEvents++;
+                    String toolCallId = data.path("toolCallId").asText();
+                    String partial = data.path("partialOutput").asText("");
+                    result.partialOutputCharacters += partial.length();
+                    result.partialOutputs.put(toolCallId, partial);
+                } else if ("assistant.reasoning_delta".equals(type)) {
+                    result.reasoningDeltaEvents++;
+                    result.reasoningDeltaCharacters +=
+                            data.path("deltaContent").asText("").length();
+                } else if ("session.skills_loaded".equals(type)) {
+                    for (JsonNode skill : data.path("skills")) {
+                        result.loadedSkills.add(skill.path("name").asText());
+                    }
                 } else if ("tool.execution_complete".equals(type)) {
                     result.toolCalls++;
+                    if (data.path("success").asBoolean()) {
+                        result.toolSuccessTrue++;
+                    } else {
+                        result.toolSuccessFalse++;
+                    }
+                    String toolCallId = data.path("toolCallId").asText();
+                    JsonNode telemetry = data.path("toolTelemetry");
+                    String skillName = telemetry.path("restrictedProperties")
+                            .path("skillName").asText("");
+                    String skillHash = telemetry.path("properties")
+                            .path("skillNameHash").asText("");
+                    if (!skillName.isBlank() && !skillHash.isBlank()) {
+                        result.skillHashes.put(skillName, skillHash);
+                    }
                     String external = data.path("toolTelemetry").path("properties")
                             .path("largeSessionLogWrittenToFile").asText();
                     if ("true".equals(external)) {
                         result.externalOutputReferences++;
+                        result.externalizedToolCalls.put(toolCallId,
+                                toolNames.getOrDefault(toolCallId, ""));
                     }
                 } else if ("user.message".equals(type)) {
                     String content = data.path("transformedContent").asText("");
@@ -408,6 +460,8 @@ public class CampaignEvaluator {
                     text(attributes, "gen_ai.response.model").ifPresent(result.models::add);
                     text(attributes, "gen_ai.request.reasoning.level")
                             .ifPresent(result.reasoningLevels::add);
+                    text(record.path("resource").path("attributes"), "service.version")
+                            .ifPresent(result.copilotCliVersions::add);
                     continue;
                 }
                 if (!"metric".equals(record.path("type").asText())) {
@@ -511,12 +565,17 @@ public class CampaignEvaluator {
             }
             block.headSha = currentHead;
             session.toolBlocks.add(block);
+            if (block.output.contains("Tests are skipped.")) {
+                session.testsSkippedMessages++;
+            }
+            recordJavaInvocation(session, block);
             classifyToolBlock(session, block);
             parseTransitions(session, block);
             parseReviewEvidence(session, block);
             parseStage30ChangeRequests(session, block);
             parseCommitEvidence(session, block);
         }
+        calculateCcaWait(session);
     }
 
     private static ToolBlock parseToolBlock(
@@ -524,10 +583,12 @@ public class CampaignEvaluator {
         ToolBlock block = new ToolBlock(tool, headingLine + 1, relativeSeconds);
         StringBuilder command = new StringBuilder();
         StringBuilder output = new StringBuilder();
+        StringBuilder raw = new StringBuilder();
         boolean commandStarted = false;
         boolean outputStarted = false;
         for (int index = headingLine + 1; index < lines.size(); index++) {
             String line = lines.get(index);
+            raw.append(line).append('\n');
             if (index > headingLine + 1 && (TOOL_HEADING.matcher(line).matches()
                     || line.equals("---"))) {
                 block.endLine = index + 1;
@@ -555,7 +616,71 @@ public class CampaignEvaluator {
         }
         block.command = command.isEmpty() ? null : command.toString().stripTrailing();
         block.output = output.toString();
+        block.raw = raw.toString();
         return block;
+    }
+
+    private static void recordJavaInvocation(SessionResult session, ToolBlock block) {
+        if (!"bash".equals(block.tool) || block.command == null) {
+            return;
+        }
+        Matcher invocation = JAVA_INVOCATION.matcher(block.command);
+        if (!invocation.find()) {
+            return;
+        }
+        String activeHome = null;
+        Matcher homes = JAVA_HOME.matcher(block.command);
+        while (homes.find() && homes.start() < invocation.start()) {
+            activeHome = homes.group(1);
+        }
+        ObjectNode value = JSON.createObjectNode();
+        value.put("line", block.startLine);
+        value.put("executable", invocation.group(1));
+        if (activeHome == null) {
+            value.putNull("javaHome");
+            value.put("availability", "unavailable");
+        } else {
+            value.put("javaHome", activeHome);
+            value.put("availability", "measured");
+        }
+        session.javaInvocations.add(value);
+    }
+
+    private static void calculateCcaWait(SessionResult session) {
+        Set<String> remoteShells = new HashSet<>();
+        for (ToolBlock block : session.toolBlocks) {
+            if (!"bash".equals(block.tool) || block.command == null
+                    || !block.command.contains("copilot_work_finished")) {
+                continue;
+            }
+            Matcher shell = BACKGROUND_SHELL.matcher(block.output);
+            while (shell.find()) {
+                remoteShells.add(shell.group(1));
+            }
+        }
+        for (ToolBlock block : session.toolBlocks) {
+            if (!"read_bash".equals(block.tool)) {
+                continue;
+            }
+            Matcher shell = READ_BASH_SHELL.matcher(block.raw);
+            Matcher delay = READ_BASH_DELAY.matcher(block.raw);
+            if (shell.find() && delay.find() && remoteShells.contains(shell.group(1))) {
+                session.ccaWaitPollCount++;
+                session.ccaWaitSeconds += Integer.parseInt(delay.group(1));
+            }
+        }
+    }
+
+    private static void finalizeSessionEvidence(SessionResult session, String transcript) {
+        for (Map.Entry<String, String> marker : session.externalizedToolCalls.entrySet()) {
+            String partial = session.partialOutputs.getOrDefault(marker.getKey(), "");
+            boolean preserved = !partial.isBlank()
+                    || ("skill".equals(marker.getValue())
+                    && transcript.contains("loaded successfully"));
+            if (!preserved) {
+                session.confirmedEvidenceGaps++;
+            }
+        }
     }
 
     private void classifyToolBlock(SessionResult session, ToolBlock block) {
@@ -674,7 +799,7 @@ public class CampaignEvaluator {
         String lower = text.toLowerCase(Locale.ROOT);
         if (lower.contains("source option 7 is no longer supported")
                 || lower.contains("target option 7 is no longer supported")) {
-            return classification("agent_operational_error", "wrong_jdk",
+            return classification("agent_operational_error", "incompatible_default_jdk",
                     "UNSUPPORTED_SOURCE_LEVEL_FOR_SELECTED_JDK",
                     "The selected JDK rejects the project's configured language level.");
         }
@@ -685,12 +810,14 @@ public class CampaignEvaluator {
         }
         if (lower.contains("gh: not found (http 404)")
                 || lower.contains("error decoding base64 input stream")) {
-            return classification("agent_operational_error", "wrong_resource",
+            return classification("agent_operational_error", "missing_campaign_metadata",
                     "INVALID_REMOTE_RESOURCE_LOOKUP",
                     "The command requested a repository resource or encoded payload that did not exist.");
         }
         if (lower.contains("intercepts pointer events")
-                || lower.contains("input did not match the regular expression")) {
+                || lower.contains("input did not match the regular expression")
+                || lower.contains("expected \"actual\" to be strictly unequal")
+                || lower.contains("acceptance.mjs") && lower.contains("err_assertion")) {
             return classification("agent_operational_error", "test_harness_error",
                     "FUNCTIONAL_TEST_HARNESS_ERROR",
                     "The functional harness used an invalid interaction or expectation.");
@@ -706,7 +833,7 @@ public class CampaignEvaluator {
         }
         if (lower.contains("executable doesn't exist")
                 && lower.contains("playwright install")) {
-            return classification("agent_operational_error", "missing_tool_dependency",
+            return classification("infrastructure", "missing_tool_dependency",
                     "PLAYWRIGHT_BROWSER_NOT_INSTALLED",
                     "The functional test was invoked before its browser dependency was installed.");
         }
@@ -739,6 +866,7 @@ public class CampaignEvaluator {
         } else {
             node.put("subtype", subtype);
         }
+        node.put("origin", classificationOrigin(category, subtype));
         node.put("ruleId", rule);
         node.put("explanation", explanation);
         return node;
@@ -749,6 +877,7 @@ public class CampaignEvaluator {
         node.put("status", "unclassified");
         node.putNull("category");
         node.putNull("subtype");
+        node.putNull("origin");
         node.putNull("ruleId");
         node.put("explanation", explanation);
         return node;
@@ -791,6 +920,8 @@ public class CampaignEvaluator {
         evidence.put("lineStart", block.startLine);
         evidence.put("lineEnd", block.endLine);
         evidence.put("excerpt", excerpt(block.output, 1200));
+        evidence.put("partialOutputCorroborated",
+                partialOutputCorroborates(session, block.output));
         event.set("classification", classification);
         event.putNull("underlyingProblemId");
         ObjectNode resolution = event.putObject("resolution");
@@ -801,6 +932,51 @@ public class CampaignEvaluator {
         events.add(event);
         session.eventIds.add(event.path("id").asText());
         return event;
+    }
+
+    private static String classificationOrigin(String category, String subtype) {
+        if ("product_defect".equals(category)) {
+            return "product_code";
+        }
+        if ("external_service".equals(subtype)) {
+            return "external_service";
+        }
+        if ("missing_tool_dependency".equals(subtype)) {
+            return "local_environment";
+        }
+        if ("test_harness_error".equals(subtype)) {
+            return "agent_authored_test_harness";
+        }
+        if ("incompatible_default_jdk".equals(subtype)
+                || "missing_campaign_metadata".equals(subtype)) {
+            return "shepherd_harness";
+        }
+        if ("agent_operational_error".equals(category)) {
+            return "agent_tool_invocation";
+        }
+        return "ci_runner";
+    }
+
+    private static boolean partialOutputCorroborates(
+            SessionResult session, String markdownOutput) {
+        String needle = Arrays.stream(markdownOutput.split("\\R"))
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .filter(line -> !line.startsWith("<"))
+                .filter(line -> !line.startsWith("```"))
+                .findFirst().orElse("");
+        if (needle.length() > 120) {
+            needle = needle.substring(0, 120);
+        }
+        if (needle.length() < 12) {
+            return false;
+        }
+        for (String partial : session.partialOutputs.values()) {
+            if (partial.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void refreshUnclassified() {
@@ -848,6 +1024,10 @@ public class CampaignEvaluator {
                 && Set.of("SUCCESS", "FAILURE", "ERROR", "CANCELLED", "TIMED_OUT",
                 "success", "failure", "error", "cancelled", "timed_out")
                 .contains(conclusion)) {
+            if ("Running Copilot cloud agent".equalsIgnoreCase(check)) {
+                session.remoteAgentCheckObservations++;
+                return;
+            }
             ObjectNode transition = JSON.createObjectNode();
             transition.put("timestamp", session.startedAt == null ? null
                     : session.startedAt.plusSeconds(block.relativeSeconds).toString());
@@ -926,7 +1106,7 @@ public class CampaignEvaluator {
                     continue;
                 }
                 ObjectNode classification = classification(
-                        "product_defect", null, "CCRA_ACTIONABLE_COMMENT",
+                        "product_defect", "behavioral_defect", "CCRA_ACTIONABLE_COMMENT",
                         "A top-level Copilot code-review comment requested a code correction.");
                 ObjectNode event = addEvent(session, block, "review_finding",
                         "ccra_review", null, classification);
@@ -961,7 +1141,7 @@ public class CampaignEvaluator {
                             + "\u0000" + node.path("body").asText();
                     if (session.changeRequestKeys.add(key)) {
                         ObjectNode classification = classification(
-                                "product_defect", null, "STAGE_30_CHANGE_REQUEST",
+                                "product_defect", "completeness_gap", "STAGE_30_CHANGE_REQUEST",
                                 "The stage-30 gate requested a substantive code or test change.");
                         ObjectNode event = addEvent(session, block, "stage_30_change_request",
                                 "stage_30_gate", null, classification);
@@ -1766,8 +1946,12 @@ public class CampaignEvaluator {
         long campaignSeconds = durationBetween(
                 manifest.path("startedAt").asText(), manifest.path("completedAt").asText());
         long sessionSeconds = sessions.stream().mapToLong(session -> session.durationSeconds).sum();
+        long jsonlSessionMs = sessions.stream().mapToLong(session -> session.jsonlDurationMs).sum();
         value.put("wallTimeSeconds", campaignSeconds);
         value.put("recordedSessionTimeSeconds", sessionSeconds);
+        value.put("jsonlSessionTimeMs", jsonlSessionMs);
+        value.put("durationSourceDifferenceMs", jsonlSessionMs - sessionSeconds * 1000);
+        value.put("primarySessionDurationSource", "markdown_header_truncated_seconds");
         value.put("orchestrationOverheadSeconds", campaignSeconds - sessionSeconds);
         value.put("evaluatorVersion", evaluatorVersion);
         value.put("evaluatorGitCommit", evaluatorCommit);
@@ -1788,26 +1972,44 @@ public class CampaignEvaluator {
         ArrayNode missing = value.putArray("missingExpectedArtifacts");
         sessions.stream().flatMap(session -> session.missingArtifacts.stream())
                 .distinct().sorted().forEach(missing::add);
-        ArrayNode external = value.putArray("externalLargeOutputReferences");
+        ArrayNode external = value.putArray("externalizedOutputMarkers");
         for (SessionResult session : sessions) {
             if (session.externalOutputReferences > 0) {
                 ObjectNode item = external.addObject();
                 item.put("taskIssue", session.issue);
                 item.put("shepherdStage", session.shepherdStage);
                 item.put("count", session.externalOutputReferences);
-                item.put("interpretation",
-                        "Potential evidence gap; equivalent output may still be visible in the transcript.");
+                item.put("confirmedEvidenceGaps", session.confirmedEvidenceGaps);
+                item.put("interpretation", session.confirmedEvidenceGaps == 0
+                        ? "Output was preserved by Markdown or JSONL partial-output evidence."
+                        : "No equivalent Markdown or partial-output evidence was found.");
             }
         }
+        value.put("confirmedEvidenceGapCount", sessions.stream()
+                .mapToInt(session -> session.confirmedEvidenceGaps).sum());
+        ObjectNode crossCheck = value.putObject("jsonlPartialOutputCrossCheck");
+        crossCheck.put("eventCount", sessions.stream()
+                .mapToInt(session -> session.partialOutputEvents).sum());
+        crossCheck.put("characterCount", sessions.stream()
+                .mapToLong(session -> session.partialOutputCharacters).sum());
+        crossCheck.put("failureEventsCorroborated", events.stream()
+                .filter(event -> event.path("evidence")
+                        .path("partialOutputCorroborated").asBoolean()).count());
+        ObjectNode reasoning = value.putObject("reasoningSummaryPresence");
+        reasoning.put("eventCount", sessions.stream()
+                .mapToInt(session -> session.reasoningDeltaEvents).sum());
+        reasoning.put("characterCount", sessions.stream()
+                .mapToLong(session -> session.reasoningDeltaCharacters).sum());
+        reasoning.put("usedForClassification", false);
         ArrayNode limitations = value.putArray("limitations");
         ObjectNode remote = limitations.addObject();
         remote.put("code", "REMOTE_AGENT_TELEMETRY_UNAVAILABLE");
         remote.put("description",
                 "CCA and CCRA internal token, tool, and model telemetry is not present.");
-        ObjectNode redacted = limitations.addObject();
-        redacted.put("code", "JSONL_TOOL_PAYLOADS_REDACTED");
-        redacted.put("description",
-                "Tool classification uses Markdown transcripts, not redacted JSONL payloads.");
+        ObjectNode payload = limitations.addObject();
+        payload.put("code", "JSONL_COMPLETE_RESULTS_REDACTED_PARTIALS_AVAILABLE");
+        payload.put("description",
+                "Completed tool results are redacted, but partial-result events provide a secondary raw-output source.");
         return value;
     }
 
@@ -1832,6 +2034,12 @@ public class CampaignEvaluator {
             node.put("sessionCount", taskSessions.size());
             node.put("recordedSessionTimeSeconds",
                     taskSessions.stream().mapToLong(value -> value.durationSeconds).sum());
+            node.put("jsonlSessionTimeMs",
+                    taskSessions.stream().mapToLong(value -> value.jsonlDurationMs).sum());
+            node.put("ccaWaitPollCount",
+                    taskSessions.stream().mapToInt(value -> value.ccaWaitPollCount).sum());
+            node.put("ccaWaitSeconds",
+                    taskSessions.stream().mapToLong(value -> value.ccaWaitSeconds).sum());
             node.put("nonzeroToolExits",
                     taskSessions.stream().mapToInt(value -> value.nonzeroToolExits).sum());
             node.put("reviewRounds",
@@ -1897,6 +2105,16 @@ public class CampaignEvaluator {
                 .mapToInt(value -> value.timeoutEvents).sum());
         result.put("idleKillEvents", sessions.stream()
                 .mapToInt(value -> value.idleKillEvents).sum());
+        ObjectNode ccaWait = result.putObject("ccaWait");
+        long waitSeconds = sessions.stream().mapToLong(value -> value.ccaWaitSeconds).sum();
+        long sessionSeconds = sessions.stream().mapToLong(value -> value.durationSeconds).sum();
+        ccaWait.put("pollCount", sessions.stream()
+                .mapToInt(value -> value.ccaWaitPollCount).sum());
+        ccaWait.put("seconds", waitSeconds);
+        ccaWait.put("shareOfRecordedSessionTime",
+                sessionSeconds == 0 ? 0.0 : waitSeconds / (double) sessionSeconds);
+        ccaWait.put("interpretation",
+                "Proxy for remote coding-agent latency; not remote-agent token or AIU cost.");
         ObjectNode flakiness = result.putObject("flakiness");
         flakiness.put("flakyTestFailures", sessions.stream()
                 .mapToInt(value -> value.flakyTestFailures).sum());
@@ -1928,8 +2146,92 @@ public class CampaignEvaluator {
             session.models.forEach(models::add);
             ArrayNode reasoning = value.putArray("reasoningLevels");
             session.reasoningLevels.forEach(reasoning::add);
+            ArrayNode cliVersions = value.putArray("copilotCliVersions");
+            session.copilotCliVersions.forEach(cliVersions::add);
+            value.set("javaInvocations", array(session.javaInvocations));
         }
         return result;
+    }
+
+    private ObjectNode aggregateRunInvariants(JsonNode manifest, List<SessionResult> sessions) {
+        ObjectNode result = JSON.createObjectNode();
+        result.put("shepherdTaskVersion",
+                manifest.path("shepherdTaskVersion").asText("unavailable"));
+        result.put("campaignCreatedWithVersion",
+                manifest.path("campaignCreatedWithVersion").asText("unavailable"));
+        ArrayNode models = result.putArray("models");
+        sessions.stream().flatMap(session -> session.models.stream())
+                .distinct().sorted().forEach(models::add);
+        ArrayNode reasoning = result.putArray("reasoningLevels");
+        sessions.stream().flatMap(session -> session.reasoningLevels.stream())
+                .distinct().sorted().forEach(reasoning::add);
+        ArrayNode cli = result.putArray("copilotCliVersions");
+        sessions.stream().flatMap(session -> session.copilotCliVersions.stream())
+                .distinct().sorted().forEach(cli::add);
+        ObjectNode hashes = result.putObject("skillContentHashes");
+        Map<String, Set<String>> bySkill = new TreeMap<>();
+        for (SessionResult session : sessions) {
+            session.skillHashes.forEach((name, hash) ->
+                    bySkill.computeIfAbsent(name, ignored -> new TreeSet<>()).add(hash));
+        }
+        bySkill.forEach((name, values) -> {
+            ArrayNode list = hashes.putArray(name);
+            values.forEach(list::add);
+        });
+        ArrayNode skills = result.putArray("loadedSkills");
+        sessions.stream().flatMap(session -> session.loadedSkills.stream())
+                .distinct().sorted().forEach(skills::add);
+        result.put("loadedSkillCount", skills.size());
+        result.put("allSessionsSameModel",
+                sessions.stream().map(session -> session.models).distinct().count() == 1);
+        result.put("allSessionsSameReasoningLevel",
+                sessions.stream().map(session -> session.reasoningLevels).distinct().count() == 1);
+        return result;
+    }
+
+    private ObjectNode aggregateCiAnalysis(
+            ObjectNode repository, List<SessionResult> sessions) {
+        ObjectNode result = JSON.createObjectNode();
+        Set<String> observed = sessions.stream().flatMap(session -> session.transitions.stream())
+                .map(node -> node.path("check").asText())
+                .filter(Predicate.not(String::isBlank))
+                .collect(Collectors.toCollection(TreeSet::new));
+        ArrayNode allObserved = result.putArray("observedCheckNames");
+        observed.forEach(allObserved::add);
+        ArrayNode substantive = result.putArray("substantiveCheckNames");
+        observed.stream()
+                .filter(name -> name.startsWith("Shepherd task "))
+                .forEach(substantive::add);
+        ArrayNode excluded = result.putArray("excludedOrchestrationChecks");
+        if (sessions.stream().mapToInt(
+                session -> session.remoteAgentCheckObservations).sum() > 0) {
+            excluded.add("Running Copilot cloud agent");
+        }
+        result.put("remoteAgentCheckObservations", sessions.stream()
+                .mapToInt(session -> session.remoteAgentCheckObservations).sum());
+        result.put("testsSkippedMessages", sessions.stream()
+                .mapToInt(session -> session.testsSkippedMessages).sum());
+        JsonNode baseline = repository.path("testIntegrity").path("baseline");
+        if (baseline.has("testsRunByDefault")) {
+            result.put("testsRunByDefault", baseline.path("testsRunByDefault").asBoolean());
+            result.put("controlCiInterpretation",
+                    "control".equals(config.arm) && !baseline.path("testsRunByDefault").asBoolean()
+                            ? "compile_only_zero_tests_by_default"
+                            : "tests_enabled_or_treatment_defined");
+        } else {
+            result.putNull("testsRunByDefault");
+            result.put("controlCiInterpretation", "unavailable_without_repository");
+        }
+        return result;
+    }
+
+    private ArrayNode interpretationNotes() {
+        ArrayNode notes = JSON.createArrayNode();
+        notes.add("Detection stage should be presented per defect and descriptively; a small number of product defects per run does not support significance claims.");
+        notes.add("Local AIU and tokens include Shepherd waiting/polling activity; CCA wait is reported separately because remote CCA internals are unavailable.");
+        notes.add("Enabling tests in the treatment is a disclosed intervention, not evaluator-detected control-arm tampering.");
+        notes.add("If the treatment raises the Java release level, disclose that it also removes the JDK-25/source-7 operational failure mode.");
+        return notes;
     }
 
     private ArrayNode aggregateHumanInterventions(List<SessionResult> sessions) {
@@ -2023,11 +2325,13 @@ public class CampaignEvaluator {
         List<String> columns = List.of(
                 "schema_version", "evaluator_version", "evaluator_git_commit", "arm",
                 "campaign_id", "row_type", "task_issue", "pr_number",
-                "session_count", "recorded_session_seconds", "nonzero_tool_exits",
+                "session_count", "recorded_session_seconds", "jsonl_session_ms",
+                "duration_source_difference_ms", "cca_wait_polls", "cca_wait_seconds",
+                "nonzero_tool_exits",
                 "review_rounds", "ccra_actionable_comments", "stage30_change_requests",
                 "product_defects", "flaky_test_failures", "leftover_state_failures",
                 "aiu", "premium_requests", "input_tokens", "cache_read_tokens",
-                "cache_write_tokens", "output_tokens", "reasoning_tokens",
+                "cache_write_tokens", "uncached_input_tokens", "output_tokens", "reasoning_tokens",
                 "files_changed", "additions", "deletions", "test_tampering_meaningfulness");
         StringBuilder csv = new StringBuilder();
         csv.append(columns.stream().map(CampaignEvaluator::csv).collect(Collectors.joining(",")))
@@ -2067,7 +2371,7 @@ public class CampaignEvaluator {
 
     private Map<String, Object> baseCsvRow(JsonNode manifest, String rowType) {
         Map<String, Object> row = new HashMap<>();
-        row.put("schema_version", "1.0");
+        row.put("schema_version", "1.1");
         row.put("evaluator_version", evaluatorVersion);
         row.put("evaluator_git_commit", evaluatorCommit);
         row.put("arm", config.arm);
@@ -2080,6 +2384,14 @@ public class CampaignEvaluator {
         row.put("session_count", sessions.size());
         row.put("recorded_session_seconds",
                 sessions.stream().mapToLong(value -> value.durationSeconds).sum());
+        long jsonlMs = sessions.stream().mapToLong(value -> value.jsonlDurationMs).sum();
+        row.put("jsonl_session_ms", jsonlMs);
+        row.put("duration_source_difference_ms", jsonlMs
+                - sessions.stream().mapToLong(value -> value.durationSeconds).sum() * 1000);
+        row.put("cca_wait_polls",
+                sessions.stream().mapToInt(value -> value.ccaWaitPollCount).sum());
+        row.put("cca_wait_seconds",
+                sessions.stream().mapToLong(value -> value.ccaWaitSeconds).sum());
         row.put("nonzero_tool_exits",
                 sessions.stream().mapToInt(value -> value.nonzeroToolExits).sum());
         row.put("review_rounds",
@@ -2110,6 +2422,8 @@ public class CampaignEvaluator {
         row.put("input_tokens", tokens.input);
         row.put("cache_read_tokens", tokens.cacheRead);
         row.put("cache_write_tokens", tokens.cacheWrite);
+        row.put("uncached_input_tokens",
+                tokens.input - tokens.cacheRead - tokens.cacheWrite);
         row.put("output_tokens", tokens.output);
         row.put("reasoning_tokens", tokens.reasoning);
     }
@@ -2184,8 +2498,18 @@ public class CampaignEvaluator {
                         root.path("campaign").path("wallTimeSeconds").asLong())).append("\n")
                 .append("- Recorded session time: ").append(formatDuration(
                         root.path("campaign").path("recordedSessionTimeSeconds").asLong())).append("\n")
+                .append("- JSONL exact session time: ")
+                .append(root.path("campaign").path("jsonlSessionTimeMs").asLong())
+                .append(" ms (")
+                .append(root.path("campaign").path("durationSourceDifferenceMs").asLong())
+                .append(" ms above second-truncated Markdown headers)\n")
                 .append("- Orchestration overhead: ").append(formatDuration(
                         root.path("campaign").path("orchestrationOverheadSeconds").asLong())).append("\n")
+                .append("- CCA wait proxy: ")
+                .append(root.path("convergence").path("ccaWait").path("pollCount").asInt())
+                .append(" polls / ")
+                .append(formatDuration(root.path("convergence").path("ccaWait")
+                        .path("seconds").asLong())).append("\n")
                 .append("- AIU: ").append(root.path("cost").path("aiu").path("value").asText()).append("\n")
                 .append("- Premium requests: ")
                 .append(root.path("cost").path("premiumRequests").path("value").asText()).append("\n");
@@ -2219,11 +2543,17 @@ public class CampaignEvaluator {
 
         report.append("\n## Trust assessment\n\n")
                 .append("- **Trustworthy:** manifest timing, session counts, transcript durations, ")
-                .append("nonzero exit counts, JSONL AIU/premium/model/tool counts, and cumulative OTEL tokens.\n")
+                .append("exact JSONL durations, nonzero exit counts, JSONL AIU/premium/model/tool counts, ")
+                .append("JSONL partial-output cross-checks, run invariants, and cumulative OTEL tokens.\n")
                 .append("- **Approximate:** command-to-head correlation when a transcript does not emit a full SHA, ")
-                .append("agent-action labels, and rule-based defect deduplication.\n")
-                .append("- **Manual review:** all entries in `unclassified.md`, external large-output references, ")
+                .append("agent-action labels, rule-based defect deduplication, and CCA wait as a latency proxy.\n")
+                .append("- **Manual review:** all entries in `unclassified.md`, confirmed evidence gaps, ")
                 .append("and remote CCA/CCRA internal cost because those internals are absent.\n");
+
+        report.append("\n## Experiment interpretation\n\n");
+        for (JsonNode note : root.path("interpretationNotes")) {
+            report.append("- ").append(note.asText()).append("\n");
+        }
 
         Files.writeString(config.outputDir.resolve("report.md"), report,
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE,
@@ -2469,6 +2799,8 @@ public class CampaignEvaluator {
         final TokenTotals tokens = new TokenTotals();
         final Set<String> models = new TreeSet<>();
         final Set<String> reasoningLevels = new TreeSet<>();
+        final Set<String> copilotCliVersions = new TreeSet<>();
+        final Set<String> loadedSkills = new TreeSet<>();
         final Set<String> javaHomes = new TreeSet<>();
         final Set<String> javacLevels = new TreeSet<>();
         final Set<String> reviewIds = new LinkedHashSet<>();
@@ -2480,16 +2812,32 @@ public class CampaignEvaluator {
         final List<ObjectNode> transitions = new ArrayList<>();
         final List<ObjectNode> humanInterventions = new ArrayList<>();
         final List<ToolBlock> toolBlocks = new ArrayList<>();
+        final List<ObjectNode> javaInvocations = new ArrayList<>();
         final Map<String, Integer> eventTypeCounts = new TreeMap<>();
+        final Map<String, String> partialOutputs = new HashMap<>();
+        final Map<String, String> externalizedToolCalls = new LinkedHashMap<>();
+        final Map<String, String> skillHashes = new TreeMap<>();
         String sessionId;
         Integer prNumber;
         Instant startedAt;
         long durationSeconds;
+        long jsonlDurationMs;
+        long partialOutputCharacters;
+        long reasoningDeltaCharacters;
+        long ccaWaitSeconds;
         BigDecimal nanoAiu = BigDecimal.ZERO;
         int premiumRequests;
         int inferenceCalls;
         int toolCalls;
         int externalOutputReferences;
+        int confirmedEvidenceGaps;
+        int partialOutputEvents;
+        int reasoningDeltaEvents;
+        int toolSuccessTrue;
+        int toolSuccessFalse;
+        int ccaWaitPollCount;
+        int remoteAgentCheckObservations;
+        int testsSkippedMessages;
         int nonzeroToolExits;
         int jsonlParseErrors;
         int otelParseErrors;
@@ -2535,6 +2883,7 @@ public class CampaignEvaluator {
             }
             value.put("startedAt", startedAt == null ? null : startedAt.toString());
             value.put("durationSeconds", durationSeconds);
+            value.put("jsonlDurationMs", jsonlDurationMs);
             value.set("aiu", metric(nanoAiu.divide(BigDecimal.valueOf(1_000_000_000L)),
                     "measured", "Final session usage checkpoint."));
             value.set("premiumRequests", metric(premiumRequests,
@@ -2543,7 +2892,25 @@ public class CampaignEvaluator {
             value.put("inferenceCalls", inferenceCalls);
             value.put("toolCalls", toolCalls);
             value.put("nonzeroToolExits", nonzeroToolExits);
-            value.put("externalLargeOutputReferences", externalOutputReferences);
+            value.put("externalizedOutputMarkers", externalOutputReferences);
+            value.put("confirmedEvidenceGaps", confirmedEvidenceGaps);
+            value.put("partialOutputEvents", partialOutputEvents);
+            value.put("partialOutputCharacters", partialOutputCharacters);
+            value.put("reasoningDeltaEvents", reasoningDeltaEvents);
+            value.put("reasoningDeltaCharacters", reasoningDeltaCharacters);
+            value.put("toolExecutionCompleteSuccessTrue", toolSuccessTrue);
+            value.put("toolExecutionCompleteSuccessFalse", toolSuccessFalse);
+            value.put("toolSuccessIsShellFailureSignal", false);
+            value.put("ccaWaitPollCount", ccaWaitPollCount);
+            value.put("ccaWaitSeconds", ccaWaitSeconds);
+            value.put("remoteAgentCheckObservations", remoteAgentCheckObservations);
+            value.put("testsSkippedMessages", testsSkippedMessages);
+            ArrayNode loaded = value.putArray("loadedSkills");
+            loadedSkills.forEach(loaded::add);
+            ObjectNode hashes = value.putObject("skillContentHashes");
+            skillHashes.forEach(hashes::put);
+            ArrayNode invocations = value.putArray("javaInvocations");
+            javaInvocations.forEach(invocations::add);
             value.put("otelMonotonicityViolations", otelMonotonicityViolations);
             value.put("flakyTestFailures", flakyTestFailures);
             value.put("flakyUnitTestFailures", flakyUnitTestFailures);
@@ -2565,6 +2932,7 @@ public class CampaignEvaluator {
         int endLine;
         String command;
         String output = "";
+        String raw = "";
         Integer exitCode;
         String headSha;
         String commitAtExecution;
@@ -2699,6 +3067,9 @@ public class CampaignEvaluator {
                     "Last cumulative OTEL export per metric attribute set per file."));
             value.set("reasoning", metric(reasoning, "measured",
                     "Last cumulative OTEL export per metric attribute set per file."));
+            value.set("uncachedInput", metric(input - cacheRead - cacheWrite, "derived",
+                    "Input tokens include cache-read and cache-write tokens; this subtracts both."));
+            value.put("inputIncludesCacheTokens", true);
             return value;
         }
     }
