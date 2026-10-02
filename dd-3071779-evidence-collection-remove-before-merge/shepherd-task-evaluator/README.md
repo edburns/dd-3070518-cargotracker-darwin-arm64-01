@@ -35,10 +35,13 @@ order:
 ```
 
 The output has one campaign row and one task row per issue. Cost, tokens, and
-session time are summed. Inter-directory gap is reported separately and is not
-counted as orchestration overhead. Sessions and events retain their attempt and
-source campaign directory. The repository start is selected from the first
-chronological task and the final revision from the last.
+active campaign time are summed. Inter-directory gap and first-start-to-last-end
+span are reported separately and the gap is not counted as orchestration
+overhead. Each task records per-attempt outcomes, including
+`convergence_failure` when remediation ends without a push. Sessions and events
+retain their attempt and source campaign directory. The repository start is
+selected from the first chronological task and the final revision from the
+last.
 
 ### Compare evaluation invariants
 
@@ -128,15 +131,22 @@ for explicit development runs and emits a report warning.
   campaign-input differences are reported as confounds.
 - CI workflows and the project POM are read at campaign start. Every observed
   job/step and plugin bound to `validate`/`verify` is mapped to `formatting`,
-  `static_analysis`, `compiler`, `unit_tests`, `container_tests`, or
-  `ci_other`; absent gates are `not_present`. Copilot orchestration checks
+  `build_contract`, `static_analysis`, `compiler`, `unit_tests`,
+  `container_tests`, or `ci_other`; absent gates are `not_present`.
+  Repository-contract steps such as test-inventory generation and
+  `verify-*-contract.sh`/`verify-source-gates.sh` use `build_contract`.
+  Every named `ci_other` step is listed for review. Copilot orchestration checks
   (`Running Copilot cloud agent`, `Addressing comment on PR #N`, and
   `copilot`) are excluded.
 - Surefire and Failsafe summaries are parsed from captured CI job logs and
-  reported per run and task. Test execution is `unavailable` only when no CI
-  log was captured.
+  reported per run and task. When the transcript captured only
+  `gh run view --log-failed`, passing-run test execution is `not_captured`
+  rather than measured with a null count.
 - Product defects have a non-null detection gate and one of
   `behavioral`, `completeness`, `style`, or `static_analysis_finding`.
+  Canonical subtypes are `behavioral_defect`, `scope_violation`,
+  `test_inventory`, `completeness_gap`, `formatting`, and
+  `static_analysis_finding`; subtype and class are validated for consistency.
   Formatting/Spotless findings are style. Style and static-analysis findings
   are comparable between arms only when the corresponding gate exists in both.
 - A stage-30 change request is one defect with an `itemCount`. Fixes are
@@ -152,7 +162,7 @@ for explicit development runs and emits a report warning.
 Metrics use explicit availability values:
 
 ```text
-measured | derived | approximate | unavailable | not_applicable
+measured | derived | approximate | not_captured | unavailable | not_applicable
 ```
 
 An unavailable value is represented as JSON `null` with a reason; it is never

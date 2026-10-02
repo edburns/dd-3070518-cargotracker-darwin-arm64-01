@@ -50,6 +50,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class CampaignEvaluator {
     private static final ObjectMapper JSON = new ObjectMapper()
@@ -786,6 +787,12 @@ public class CampaignEvaluator {
             parseStage30ChangeRequests(session, block);
             parseCommitEvidence(session, block);
         }
+        if (lines.stream().anyMatch(line ->
+                line.contains("SHEPHERD FAILED: no remediation push"))) {
+            session.convergenceFailure = true;
+            session.convergenceFailureReason =
+                    "SHEPHERD FAILED: no remediation push";
+        }
         calculateCcaWait(session);
     }
 
@@ -795,6 +802,11 @@ public class CampaignEvaluator {
             return;
         }
         session.ciLogCaptured = true;
+        if (block.command.contains("--log-failed")) {
+            session.ciFailedLogOnlyCaptured = true;
+        } else {
+            session.ciFullLogCaptured = true;
+        }
         String run = "unknown";
         Matcher runId = Pattern.compile("gh\\s+run\\s+view\\s+(\\d+)").matcher(block.command);
         if (runId.find()) run = runId.group(1);
@@ -936,12 +948,18 @@ public class CampaignEvaluator {
         if (!"bash".equals(block.tool)) {
             return;
         }
+        List<String> failedChecks = failedCiChecks(block.output).stream()
+                .filter(Predicate.not(CampaignEvaluator::isCopilotOrchestrationCheck))
+                .filter(Predicate.not(CampaignEvaluator::isAggregateWorkflowCheck))
+                .toList();
         if (block.exitCode != null && block.exitCode != 0) {
-            addEvent(session, block, "nonzero_tool_exit",
-                    detector(block), block.exitCode, classifyFailure(block));
+            if (failedChecks.isEmpty()) {
+                addEvent(session, block, "nonzero_tool_exit",
+                        detector(block), block.exitCode, classifyFailure(block));
+            }
             session.nonzeroToolExits++;
         }
-        if (block.output.contains("BUILD FAILURE")) {
+        if (block.output.contains("BUILD FAILURE") && failedChecks.isEmpty()) {
             addEvent(session, block, "build_failure",
                     detector(block), block.exitCode, classifyFailure(block));
         }
@@ -973,20 +991,23 @@ public class CampaignEvaluator {
                     detector(block), block.exitCode, classification);
             block.testFailureEvents.add(event);
         }
-        for (String check : failedCiChecks(block.output)) {
-            if (!isCopilotOrchestrationCheck(check)) {
-                String gate = ciGate(check);
-                ObjectNode classification = classification(
-                        "product_defect", null, "FAILED_CI_CHECK",
-                        "A completed CI check reported failure.");
-                ObjectNode event = addEvent(session, block, "failed_ci_check",
-                        gate, null, classification);
-                event.put("commandOrCheck", excerpt(check, 300));
-                event.put("where", "ci");
-            }
+        for (String check : failedChecks) {
+            String gate = ciGate(check);
+            ObjectNode classification = classification(
+                    "product_defect", null, "FAILED_CI_CHECK",
+                    "A completed CI check reported failure.");
+            ObjectNode event = addEvent(session, block, "failed_ci_check",
+                    gate, null, classification);
+            event.put("commandOrCheck", excerpt(check, 300));
+            event.put("where", "ci");
         }
         for (String line : block.output.split("\\R")) {
             if (line.trim().startsWith("SHEPHERD FAILED:")) {
+                if (line.contains("no remediation push")) {
+                    session.convergenceFailure = true;
+                    session.convergenceFailureReason =
+                            "SHEPHERD FAILED: no remediation push";
+                }
                 addEvent(session, block, "acceptance_failure", "functional_acceptance",
                         block.exitCode, classifyFailure(block));
             }
@@ -1098,9 +1119,18 @@ public class CampaignEvaluator {
                 || lower.matches("addressing comment on pr #?\\d+");
     }
 
+    private static boolean isAggregateWorkflowCheck(String check) {
+        return "main build".equals(check.toLowerCase(Locale.ROOT).trim());
+    }
+
     private ObjectNode classifyFailure(ToolBlock block) {
         String text = ((block.command == null ? "" : block.command) + "\n" + block.output);
         String lower = text.toLowerCase(Locale.ROOT);
+        if (lower.contains("shepherd failed: no remediation push")) {
+            return classification("agent_operational_error", "convergence_failure",
+                    "NO_REMEDIATION_PUSH",
+                    "The task attempt ended without a remediation commit.");
+        }
         if (lower.contains("source option 7 is no longer supported")
                 || lower.contains("target option 7 is no longer supported")) {
             return classification("agent_operational_error", "incompatible_default_jdk",
@@ -1136,6 +1166,12 @@ public class CampaignEvaluator {
             return classification("agent_operational_error", "test_harness_error",
                     "FUNCTIONAL_TEST_HARNESS_ERROR",
                     "The functional harness used an invalid interaction or expectation.");
+        }
+        if (lower.contains("spotless:apply")
+                && lower.contains("cannot find git repository in any parent directory")) {
+            return classification("agent_operational_error", "worktree_context",
+                    "SPOTLESS_GIT_WORKTREE_CONTEXT",
+                    "Spotless could not resolve a Git worktree from the agent's execution context.");
         }
         if (lower.contains("command not found") || lower.contains("unknown option")
                 || lower.contains("unknown flag") || lower.contains("no such file or directory")
@@ -1173,7 +1209,7 @@ public class CampaignEvaluator {
                 || lower.matches("(?s).*\"name\"\\s*:\\s*\"formatting\".*"
                 + "\"conclusion\"\\s*:\\s*\"failure\".*"));
         if (failedFormatting) {
-            return classification("product_defect", "style",
+            return classification("product_defect", "formatting",
                     "FORMATTING_GATE_FAILURE",
                     "The formatting or Spotless gate reported a violation.");
         }
@@ -1271,15 +1307,10 @@ public class CampaignEvaluator {
                     ? "ci_other" : gate
                     : ciGate(failingStep);
             event.put("detectionGate", normalizedGate);
-            if (classification.path("subtype").isNull()
-                    || classification.path("subtype").asText().isBlank()) {
-                ((ObjectNode) classification).put("subtype",
-                        "formatting".equals(normalizedGate) ? "style"
-                                : "static_analysis".equals(normalizedGate)
-                                ? "static_analysis_finding" : "behavioral_defect");
-            }
-            event.put("defectClass", defectClass(normalizedGate,
-                    classification.path("subtype").asText(), kind));
+            canonicalizeProductClassification(
+                    classification, normalizedGate, kind, block.output);
+            event.put("defectClass",
+                    defectClass(classification.path("subtype").asText()));
         } else {
             event.putNull("detectionGate");
             event.putNull("defectClass");
@@ -1339,14 +1370,51 @@ public class CampaignEvaluator {
         return candidate;
     }
 
-    private static String defectClass(String gate, String subtype, String kind) {
-        if ("formatting".equals(gate) || "style".equals(subtype)
-                || kind.contains("format")) return "style";
-        if ("static_analysis".equals(gate)) return "static_analysis_finding";
-        if ("stage_30_gate".equals(gate) || "completeness_gap".equals(subtype)) {
-            return "completeness";
+    private static void canonicalizeProductClassification(
+            ObjectNode classification, String gate, String kind, String evidence) {
+        String subtype = classification.path("subtype").asText("");
+        String lower = evidence.toLowerCase(Locale.ROOT);
+        if ("formatting".equals(gate) || kind.contains("format")) {
+            subtype = "formatting";
+        } else if ("build_contract".equals(gate)) {
+            subtype = "test_inventory";
+        } else if ("stage_30_gate".equals(gate)) {
+            if (subtype.isBlank() || "completeness_gap".equals(subtype)) {
+                subtype = stage30Subtype(lower);
+            }
+        } else if ("ccra_review".equals(gate)) {
+            subtype = "behavioral_defect";
+        } else if ("static_analysis".equals(gate)) {
+            subtype = "static_analysis_finding";
+        } else if (subtype.isBlank()) {
+            subtype = "behavioral_defect";
         }
-        return "behavioral";
+        classification.put("subtype", subtype);
+        classification.put("origin", classificationOrigin("product_defect", subtype));
+    }
+
+    private static String stage30Subtype(String body) {
+        String lower = body.toLowerCase(Locale.ROOT);
+        if (lower.contains("diff scope") || lower.contains("scope violation")
+                || lower.contains("out-of-scope") || lower.contains("out of scope")
+                || lower.contains("unrelated") || lower.contains("diff is confined")
+                || lower.contains("wrapper changes")) {
+            return "scope_violation";
+        }
+        if (lower.contains("spotless") || lower.contains("formatting")) {
+            return "formatting";
+        }
+        return "completeness_gap";
+    }
+
+    private static String defectClass(String subtype) {
+        return switch (subtype) {
+            case "formatting" -> "style";
+            case "static_analysis_finding" -> "static_analysis_finding";
+            case "scope_violation", "test_inventory", "completeness_gap" -> "completeness";
+            case "behavioral_defect" -> "behavioral";
+            default -> "behavioral";
+        };
     }
 
     private static String activity(ToolBlock block) {
@@ -1592,21 +1660,39 @@ public class CampaignEvaluator {
             return;
         }
         if (block.command != null && block.command.contains("gh pr review")
-                && block.command.contains("--request-changes")
-                && block.command.contains("REVIEW_BODY=")) {
-            Matcher head = Pattern.compile("CURRENT_SHA=['\"]([0-9a-f]{40})").matcher(block.command);
+                && block.command.contains("--request-changes")) {
+            Matcher head = Pattern.compile(
+                    "(?:CURRENT|CURRENT_SHA)=['\"]([0-9a-f]{40})").matcher(block.command);
             if (head.find()) {
                 block.headSha = head.group(1);
             }
-            String summary = substantiveReviewSummary(block.command);
-            String key = "posted\u0000" + summary;
+            Matcher previous = Pattern.compile(
+                    "\"previousHead\"\\s*:\\s*\"([0-9a-f]{40})\"|unchanged=([0-9a-f]{40})")
+                    .matcher(block.output);
+            if (previous.find()) {
+                block.headSha = previous.group(1) == null
+                        ? previous.group(2) : previous.group(1);
+            }
+            String body = stage30RequestBody(block.command);
+            String key = "posted\u0000" + body;
             if (session.changeRequestKeys.add(key)) {
+                String subtype = stage30Subtype(body);
+                boolean alreadyDetected = events.stream()
+                        .anyMatch(event -> event.path("taskIssue").asInt() == session.issue
+                                && "product_defect".equals(event.path("classification")
+                                .path("category").asText())
+                                && subtype.equals(event.path("classification")
+                                .path("subtype").asText()));
+                if (alreadyDetected) {
+                    return;
+                }
                 ObjectNode classification = classification(
-                        "product_defect", "completeness_gap", "STAGE_30_CHANGE_REQUEST",
+                        "product_defect", subtype, "STAGE_30_CHANGE_REQUEST",
                         "The stage-30 gate requested a substantive code or test change.");
                 ObjectNode event = addEvent(session, block, "stage_30_change_request",
                         "stage_30_gate", null, classification);
-                Matcher pr = Pattern.compile("PR_NUMBER=(\\d+)").matcher(block.command);
+                Matcher pr = Pattern.compile(
+                        "(?:PR_NUMBER|PR)=['\"]?(\\d+)").matcher(block.command);
                 if (pr.find()) {
                     session.prNumber = Integer.parseInt(pr.group(1));
                     event.put("prNumber", session.prNumber);
@@ -1626,8 +1712,8 @@ public class CampaignEvaluator {
                     event.put("fixTimestampSourceHint",
                             "command_output_copilot_work_finished");
                 }
-                ((ObjectNode) event.path("evidence")).put("excerpt", summary);
-                event.put("itemCount", changeRequestItemCount(summary));
+                ((ObjectNode) event.path("evidence")).put("excerpt", body);
+                event.put("itemCount", changeRequestItemCount(body));
             }
             return;
         }
@@ -1675,6 +1761,13 @@ public class CampaignEvaluator {
     }
 
     private static int changeRequestItemCount(String body) {
+        long sections = Arrays.stream(body.split("\\R"))
+                .map(String::strip)
+                .filter(line -> line.startsWith("## "))
+                .count();
+        if (sections > 0) {
+            return (int) sections;
+        }
         long bullets = Arrays.stream(body.split("\\R"))
                 .map(String::strip)
                 .filter(line -> line.matches("(?:[-*]|\\d+[.)])\\s+.+"))
@@ -1682,17 +1775,25 @@ public class CampaignEvaluator {
         return (int) Math.max(1, bullets);
     }
 
-    private static String substantiveReviewSummary(String command) {
-        Matcher fix = Pattern.compile("(?m)^\\*\\*Fix:\\*\\*\\s*(.+)$").matcher(command);
-        if (fix.find()) {
-            return "Missing facade test: "
-                    + excerpt(fix.group(1).replaceAll("';.*$", ""), 470);
+    private static String stage30RequestBody(String command) {
+        Matcher heredoc = Pattern.compile(
+                "(?s)(?:REVIEW_BODY|BODY)=\\$\\(cat\\s+<<'?EOF'?\\R(.*?)\\REOF\\R?\\)")
+                .matcher(command);
+        if (heredoc.find()) {
+            return heredoc.group(1).strip();
+        }
+        Matcher quoted = Pattern.compile(
+                "(?s)(?:REVIEW_BODY|BODY)=['\"](.*?)['\"]\\R.*?gh\\s+pr\\s+review")
+                .matcher(command);
+        if (quoted.find()) {
+            return quoted.group(1).strip();
         }
         return Arrays.stream(command.split("\\R"))
                 .map(String::trim)
                 .filter(line -> !line.isBlank())
                 .filter(line -> !line.startsWith("@copilot"))
-                .filter(line -> !line.startsWith("REVIEW_BODY="))
+                .filter(line -> !line.startsWith("REVIEW_BODY=")
+                        && !line.startsWith("BODY="))
                 .filter(line -> !line.startsWith("##"))
                 .findFirst().map(line -> excerpt(line, 500))
                 .orElse("Stage-30 change request");
@@ -1948,9 +2049,7 @@ public class CampaignEvaluator {
                 defect.put("categorySubtype",
                         event.path("classification").path("subtype").asText());
                 defect.put("defectClass", event.path("defectClass").asText("behavioral"));
-                defect.put("itemCount",
-                        "stage_30_change_request".equals(event.path("eventKind").asText())
-                                ? 1 : event.path("itemCount").asInt(1));
+                defect.put("itemCount", event.path("itemCount").asInt(1));
                 defect.put("summary", summarizeDefect(event));
                 ObjectNode first = defect.putObject("firstDetection");
                 first.put("eventId", event.path("id").asText());
@@ -1997,8 +2096,9 @@ public class CampaignEvaluator {
                 }
                 defects.put(fingerprint, defect);
             } else if ("stage_30_change_request".equals(event.path("eventKind").asText())) {
-                defect.put("itemCount", defect.path("itemCount").asInt() + 1);
-                continue;
+                defect.put("itemCount", Math.max(
+                        defect.path("itemCount").asInt(1),
+                        event.path("itemCount").asInt(1)));
             }
             ((ArrayNode) defect.path("occurrenceEventIds")).add(event.path("id").asText());
             defect.put("occurrenceCount",
@@ -2020,22 +2120,15 @@ public class CampaignEvaluator {
     }
 
     private static String defectFingerprint(ObjectNode event) {
-        if ("stage_30_change_request".equals(event.path("eventKind").asText())) {
-            return event.path("taskIssue").asText() + "|stage30|"
-                    + event.path("timestamp").asText(event.path("evidence")
-                    .path("excerpt").asText());
+        String base = event.path("taskIssue").asText() + "|"
+                + event.path("attempt").asText() + "|"
+                + event.path("shepherdStage").asText() + "|"
+                + event.path("classification").path("subtype").asText() + "|"
+                + event.path("detectionGate").asText();
+        if ("review_finding".equals(event.path("eventKind").asText())) {
+            return base + "|" + event.path("underlyingProblemId").asText();
         }
-        String excerpt = event.path("evidence").path("excerpt").asText()
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[0-9a-f]{7,40}", "<sha>")
-                .replaceAll("\\d+", "<n>")
-                .replaceAll("\\s+", " ")
-                .trim();
-        if (excerpt.length() > 240) {
-            excerpt = excerpt.substring(0, 240);
-        }
-        return event.path("taskIssue").asText() + "|"
-                + event.path("classification").path("ruleId").asText() + "|" + excerpt;
+        return base;
     }
 
     private static String summarizeDefect(ObjectNode event) {
@@ -2561,10 +2654,11 @@ public class CampaignEvaluator {
         result.put("projectRoot", projectRoot);
         ArrayNode workflows = result.putArray("workflows");
         Map<String, Integer> gateCounts = new LinkedHashMap<>();
-        for (String gate : List.of("formatting", "static_analysis", "compiler",
+        for (String gate : List.of("formatting", "build_contract", "static_analysis", "compiler",
                 "unit_tests", "container_tests", "ci_other")) {
             gateCounts.put(gate, 0);
         }
+        Set<String> ciOtherNames = new TreeSet<>();
         for (String path : gitPaths(repo, sha,
                 value -> value.startsWith(".github/workflows/")
                         && (value.endsWith(".yml") || value.endsWith(".yaml")))) {
@@ -2573,12 +2667,21 @@ public class CampaignEvaluator {
             workflow.put("path", path);
             ArrayNode jobs = workflow.putArray("jobs");
             String job = null;
-            String step = null;
             int jobIndent = -1;
+            boolean inJobs = false;
+            ObjectNode currentStep = null;
+            StringBuilder currentStepText = new StringBuilder();
             for (String line : text.split("\\R")) {
                 int indent = line.length() - line.stripLeading().length();
+                if ("jobs:".equals(line.strip())) {
+                    inJobs = true;
+                    continue;
+                }
                 Matcher jobLine = Pattern.compile("^\\s{2}([A-Za-z0-9_-]+):\\s*$").matcher(line);
-                if (jobLine.find() && !"jobs".equals(jobLine.group(1))) {
+                if (inJobs && jobLine.find()) {
+                    recordWorkflowStep(currentStep, currentStepText, gateCounts, ciOtherNames);
+                    currentStep = null;
+                    currentStepText.setLength(0);
                     job = jobLine.group(1);
                     jobIndent = indent;
                     ObjectNode node = jobs.addObject();
@@ -2596,36 +2699,32 @@ public class CampaignEvaluator {
                 Matcher name = Pattern.compile(
                         "^\\s*-\\s*name:\\s*['\"]?(.+?)['\"]?\\s*$").matcher(line);
                 if (job != null && name.find()) {
-                    step = name.group(1).replaceAll("['\"]$", "").trim();
+                    recordWorkflowStep(currentStep, currentStepText, gateCounts, ciOtherNames);
+                    currentStepText.setLength(0);
+                    String step = name.group(1).replaceAll("['\"]$", "").trim();
                     ObjectNode jobNode = (ObjectNode) jobs.get(jobs.size() - 1);
-                    ObjectNode stepNode = ((ArrayNode) jobNode.path("steps")).addObject();
-                    stepNode.put("name", step);
-                    String gate = ciGate(step);
-                    stepNode.put("gate", gate);
-                    gateCounts.merge(gate, 1, Integer::sum);
+                    currentStep = ((ArrayNode) jobNode.path("steps")).addObject();
+                    currentStep.put("name", step);
+                    currentStep.put("named", true);
+                    currentStepText.append(line).append('\n');
                 } else if (job != null && indent > jobIndent
-                        && (line.stripLeading().startsWith("run:")
-                        || line.stripLeading().startsWith("- run:")
+                        && (line.stripLeading().startsWith("- run:")
                         || line.stripLeading().startsWith("- uses:"))) {
+                    recordWorkflowStep(currentStep, currentStepText, gateCounts, ciOtherNames);
+                    currentStepText.setLength(0);
                     String stripped = line.stripLeading().replaceFirst("^-\\s*", "");
                     boolean uses = stripped.startsWith("uses:");
                     String command = stripped.substring(stripped.indexOf(':') + 1).trim();
                     ObjectNode jobNode = (ObjectNode) jobs.get(jobs.size() - 1);
-                    ObjectNode stepNode;
-                    ArrayNode steps = (ArrayNode) jobNode.path("steps");
-                    if (steps.isEmpty() || step == null) {
-                        stepNode = steps.addObject();
-                        stepNode.put("name", uses ? "uses" : "run");
-                    } else {
-                        stepNode = (ObjectNode) steps.get(steps.size() - 1);
-                    }
-                    stepNode.put(uses ? "uses" : "command", command);
-                    String gate = ciGate((step == null ? "" : step) + " " + command);
-                    stepNode.put("gate", gate);
-                    gateCounts.merge(gate, 1, Integer::sum);
-                    step = null;
+                    currentStep = ((ArrayNode) jobNode.path("steps")).addObject();
+                    currentStep.put("name", (uses ? "uses: " : "run: ") + command);
+                    currentStep.put("named", false);
+                    currentStepText.append(line).append('\n');
+                } else if (currentStep != null && indent > jobIndent) {
+                    currentStepText.append(line).append('\n');
                 }
             }
+            recordWorkflowStep(currentStep, currentStepText, gateCounts, ciOtherNames);
         }
         String pomPath = joinRoot(projectRoot, "pom.xml");
         String pom = gitShow(repo, sha, pomPath);
@@ -2644,7 +2743,12 @@ public class CampaignEvaluator {
             String gate = ciGate(artifact + " " + body);
             node.put("gate", gate);
             gateCounts.merge(gate, 1, Integer::sum);
+            if ("ci_other".equals(gate) && !artifact.isBlank()) {
+                ciOtherNames.add("Maven plugin: " + artifact);
+            }
         }
+        ArrayNode ciOther = result.putArray("ciOtherSteps");
+        ciOtherNames.forEach(ciOther::add);
         ObjectNode taxonomy = result.putObject("taxonomy");
         gateCounts.forEach((gate, count) -> {
             ObjectNode node = taxonomy.putObject(gate);
@@ -2652,6 +2756,20 @@ public class CampaignEvaluator {
             node.put("entryCount", count);
         });
         return result;
+    }
+
+    private static void recordWorkflowStep(
+            ObjectNode step, StringBuilder definition,
+            Map<String, Integer> gateCounts, Set<String> ciOtherNames) {
+        if (step == null) return;
+        String text = definition.toString().strip();
+        step.put("definition", text);
+        String gate = ciGate(step.path("name").asText() + "\n" + text);
+        step.put("gate", gate);
+        gateCounts.merge(gate, 1, Integer::sum);
+        if ("ci_other".equals(gate) && step.path("named").asBoolean()) {
+            ciOtherNames.add(step.path("name").asText());
+        }
     }
 
     private static String xmlValue(String xml, String name) {
@@ -2662,10 +2780,19 @@ public class CampaignEvaluator {
 
     private static String ciGate(String value) {
         String lower = value.toLowerCase(Locale.ROOT);
+        String trimmed = lower.trim();
+        if (trimmed.equals("build") || lower.contains("write test inventory")
+                || lower.contains("verify-build-contract.sh")
+                || lower.contains("verify-compatibility-contract.sh")
+                || lower.contains("verify-source-gates.sh")
+                || lower.contains("test inventory")) {
+            return "build_contract";
+        }
         if (lower.contains("format") || lower.contains("spotless")) return "formatting";
         if (lower.contains("pmd") || lower.contains("checkstyle")
-                || lower.contains("spotbugs") || lower.contains("source-gate")
-                || lower.contains("source gate") || lower.contains("enforcer")) {
+                || lower.contains("spotbugs") || lower.contains("enforcer")
+                || lower.contains("forbidden-api") || lower.contains("archunit")
+                || lower.contains("error prone")) {
             return "static_analysis";
         }
         if (lower.contains("compile") || lower.contains("compiler")) return "compiler";
@@ -3138,11 +3265,14 @@ public class CampaignEvaluator {
         copy(manifest, value, "completedAt");
         copy(manifest, value, "status");
         copy(manifest, value, "exitCode");
-        long campaignSeconds = durationBetween(
+        long elapsedSpanSeconds = durationBetween(
                 manifest.path("startedAt").asText(), manifest.path("completedAt").asText());
+        long campaignSeconds = combinedActiveSeconds();
         long sessionSeconds = sessions.stream().mapToLong(session -> session.durationSeconds).sum();
         long jsonlSessionMs = sessions.stream().mapToLong(session -> session.jsonlDurationMs).sum();
         value.put("wallTimeSeconds", campaignSeconds);
+        value.put("activeTimeSeconds", campaignSeconds);
+        value.put("elapsedSpanSeconds", elapsedSpanSeconds);
         value.put("recordedSessionTimeSeconds", sessionSeconds);
         value.put("jsonlSessionTimeMs", jsonlSessionMs);
         value.put("durationSourceDifferenceMs", jsonlSessionMs - sessionSeconds * 1000);
@@ -3152,10 +3282,43 @@ public class CampaignEvaluator {
         long gaps = combinedGapSeconds();
         value.put("interDirectoryGapSeconds", gaps);
         value.put("orchestrationOverheadSeconds",
-                campaignSeconds - sessionSeconds - gaps);
+                campaignSeconds - sessionSeconds);
+        ArrayNode attempts = value.putArray("attemptOutcomes");
+        for (Path directory : config.campaignDirs) {
+            try {
+                JsonNode attempt = JSON.readTree(directory
+                        .resolve("shepherd-task-25-given-list-run.json").toFile());
+                ObjectNode row = attempts.addObject();
+                row.put("campaignDirectory", directory.toString());
+                copy(attempt, row, "startedAt");
+                copy(attempt, row, "completedAt");
+                copy(attempt, row, "status");
+                copy(attempt, row, "exitCode");
+                row.put("activeTimeSeconds", durationBetween(
+                        attempt.path("startedAt").asText(),
+                        attempt.path("completedAt").asText()));
+            } catch (IOException ignored) {
+                // Manifest readability was validated before analysis.
+            }
+        }
         value.put("evaluatorVersion", evaluatorVersion);
         value.put("evaluatorGitCommit", evaluatorCommit);
         return value;
+    }
+
+    private long combinedActiveSeconds() {
+        long total = 0;
+        for (Path directory : config.campaignDirs) {
+            try {
+                JsonNode manifest = JSON.readTree(directory
+                        .resolve("shepherd-task-25-given-list-run.json").toFile());
+                total += durationBetween(manifest.path("startedAt").asText(),
+                        manifest.path("completedAt").asText());
+            } catch (IOException ignored) {
+                // Manifest readability was validated before analysis.
+            }
+        }
+        return total;
     }
 
     private long combinedGapSeconds() {
@@ -3257,6 +3420,27 @@ public class CampaignEvaluator {
             node.put("sessionCount", taskSessions.size());
             node.put("attempts", taskSessions.stream()
                     .map(session -> session.attempt).distinct().count());
+            ArrayNode attemptOutcomes = node.putArray("attemptOutcomes");
+            taskSessions.stream().map(session -> session.attempt).distinct().sorted()
+                    .forEach(attempt -> {
+                        List<SessionResult> selected = taskSessions.stream()
+                                .filter(session -> session.attempt == attempt).toList();
+                        ObjectNode outcome = attemptOutcomes.addObject();
+                        outcome.put("attempt", attempt);
+                        boolean convergenceFailure = selected.stream()
+                                .anyMatch(session -> session.convergenceFailure);
+                        outcome.put("outcome", convergenceFailure
+                                ? "convergence_failure" : "completed");
+                        outcome.put("recordedSessionTimeSeconds", selected.stream()
+                                .mapToLong(session -> session.durationSeconds).sum());
+                        if (convergenceFailure) {
+                            outcome.put("reason", selected.stream()
+                                    .filter(session -> session.convergenceFailure)
+                                    .map(session -> session.convergenceFailureReason)
+                                    .filter(Objects::nonNull)
+                                    .findFirst().orElse("No remediation push."));
+                        }
+                    });
             node.put("recordedSessionTimeSeconds",
                     taskSessions.stream().mapToLong(value -> value.durationSeconds).sum());
             node.put("jsonlSessionTimeMs",
@@ -3565,9 +3749,14 @@ public class CampaignEvaluator {
         result.put("ciTestsSkippedMessages", ciSkipped);
         ObjectNode execution = result.putObject("testExecution");
         boolean ciLogsCaptured = sessions.stream().anyMatch(session -> session.ciLogCaptured);
+        boolean fullCiLogsCaptured = sessions.stream().anyMatch(
+                session -> session.ciFullLogCaptured);
+        boolean failedCiLogsOnly = ciLogsCaptured && !fullCiLogsCaptured
+                && sessions.stream().anyMatch(session -> session.ciFailedLogOnlyCaptured);
         List<CiTestSummary> summaries = sessions.stream()
                 .flatMap(session -> session.ciTestSummaries.stream()).toList();
         result.put("ciLogsCaptured", ciLogsCaptured);
+        result.put("fullCiLogsCaptured", fullCiLogsCaptured);
         ArrayNode perRun = result.putArray("testSummariesByRunAndTask");
         for (SessionResult session : sessions) {
             for (CiTestSummary summary : session.ciTestSummaries) {
@@ -3582,7 +3771,14 @@ public class CampaignEvaluator {
                 node.put("skipped", summary.skipped());
             }
         }
-        if (!summaries.isEmpty()) {
+        if (failedCiLogsOnly) {
+            execution.put("availability", "not_captured");
+            execution.putNull("testsExecuted");
+            execution.putNull("testsRun");
+            execution.put("reason",
+                    "Only gh run view --log-failed output was captured; passing-run "
+                            + "Surefire/Failsafe summaries were not captured.");
+        } else if (!summaries.isEmpty()) {
             execution.put("availability", "measured");
             execution.put("testsExecuted", summaries.stream()
                     .mapToInt(CiTestSummary::testsRun).sum() > 0);
@@ -3777,6 +3973,8 @@ public class CampaignEvaluator {
                 repository.path("startCiAndBuildGates").path("taxonomy")
                         .has("formatting")
                         && repository.path("startCiAndBuildGates").path("taxonomy")
+                        .has("build_contract")
+                        && repository.path("startCiAndBuildGates").path("taxonomy")
                         .has("static_analysis"),
                 repository.path("startCiAndBuildGates").path("taxonomy"));
         boolean allProductClassified = events.stream()
@@ -3786,6 +3984,13 @@ public class CampaignEvaluator {
                         && event.path("defectClass").isTextual());
         addAcceptance(checks, "product_defect_gate_and_class_non_null",
                 allProductClassified, allProductClassified);
+        boolean consistentClasses = StreamSupport.stream(
+                        root.path("productDefects").spliterator(), false)
+                .allMatch(defect -> defectClass(
+                        defect.path("categorySubtype").asText()).equals(
+                        defect.path("defectClass").asText()));
+        addAcceptance(checks, "defect_class_subtype_consistent",
+                consistentClasses, consistentClasses);
         List<ObjectNode> guardrailUnclassified = unclassified.stream()
                 .filter(event -> {
                     String evidence = event.path("evidence").path("excerpt")
@@ -3807,6 +4012,12 @@ public class CampaignEvaluator {
                         || root.path("campaign").path("campaignDirectories").size()
                         == config.campaignDirs.size(),
                 root.path("campaign").path("campaignDirectories"));
+        addAcceptance(checks, "combined_active_time_separates_gap",
+                config.mode != Mode.COMBINE
+                        || root.path("campaign").path("activeTimeSeconds").asLong()
+                        + root.path("campaign").path("interDirectoryGapSeconds").asLong()
+                        == root.path("campaign").path("elapsedSpanSeconds").asLong(),
+                root.path("campaign"));
         return checks;
     }
 
@@ -4124,22 +4335,31 @@ public class CampaignEvaluator {
         }
 
         report.append("## Headline findings\n\n")
-                .append("| Task | PR | First product-defect detection | Product defects | Nonzero exits | CCRA rounds | CCRA comments | Flaky tests |\n")
-                .append("|---:|---:|---|---:|---:|---:|---:|---:|\n");
+                .append("| Task | PR | Attempts/outcomes | First product-defect detection | Product defects | Nonzero exits | CCRA rounds | CCRA comments | Flaky tests |\n")
+                .append("|---:|---:|---|---|---:|---:|---:|---:|---:|\n");
         for (TaskResult task : tasks.values()) {
-            List<ObjectNode> taskEvents = events.stream()
-                    .filter(event -> event.path("taskIssue").asInt() == task.issue)
-                    .filter(event -> "product_defect".equals(
-                            event.path("classification").path("category").asText()))
+            List<JsonNode> taskDefects = StreamSupport.stream(
+                            root.path("productDefects").spliterator(), false)
+                    .filter(defect -> defect.path("taskIssue").asInt() == task.issue)
                     .toList();
-            String first = taskEvents.isEmpty() ? "none detected"
-                    : taskEvents.get(0).path("detectionGate").asText();
+            String first = taskDefects.isEmpty() ? "none detected"
+                    : taskDefects.get(0).path("firstDetection")
+                    .path("detectionGate").asText();
             List<SessionResult> selected = sessions.stream()
                     .filter(value -> value.issue == task.issue).toList();
+            String outcomes = selected.stream().map(session -> session.attempt)
+                    .distinct().sorted()
+                    .map(attempt -> attempt + ":"
+                            + (selected.stream()
+                            .filter(session -> session.attempt == attempt)
+                            .anyMatch(session -> session.convergenceFailure)
+                            ? "convergence_failure" : "completed"))
+                    .collect(Collectors.joining(", "));
             report.append("| ").append(task.issue).append(" | ")
                     .append(task.prNumber == null ? "unavailable" : task.prNumber)
+                    .append(" | ").append(outcomes)
                     .append(" | ").append(first).append(" | ")
-                    .append(taskEvents.size()).append(" | ")
+                    .append(taskDefects.size()).append(" | ")
                     .append(selected.stream().mapToInt(value -> value.nonzeroToolExits).sum())
                     .append(" | ")
                     .append(selected.stream().mapToInt(value -> value.reviewIds.size()).sum())
@@ -4151,8 +4371,13 @@ public class CampaignEvaluator {
         }
 
         report.append("\n## Cost and timing\n\n")
-                .append("- Campaign wall clock: ").append(formatDuration(
-                        root.path("campaign").path("wallTimeSeconds").asLong())).append("\n")
+                .append("- Campaign active time: ").append(formatDuration(
+                        root.path("campaign").path("activeTimeSeconds").asLong())).append("\n")
+                .append("- Inter-directory gap: ").append(formatDuration(
+                        root.path("campaign").path("interDirectoryGapSeconds").asLong())).append("\n")
+                .append("- First-start to last-end span: ").append(formatDuration(
+                        root.path("campaign").path("elapsedSpanSeconds").asLong()))
+                .append(" (not campaign active time)\n")
                 .append("- Recorded session time: ").append(formatDuration(
                         root.path("campaign").path("recordedSessionTimeSeconds").asLong())).append("\n")
                 .append("- JSONL exact session time: ")
@@ -4216,6 +4441,21 @@ public class CampaignEvaluator {
                     .append(excerpt(check.path("observed").toString(), 500)
                             .replace("|", "\\|"))
                     .append("` |\n");
+        }
+
+        report.append("\n## CI gate inventory\n\n")
+                .append("| Gate | Status | Entries |\n|---|---|---:|\n");
+        root.path("repositoryAnalysis").path("startCiAndBuildGates")
+                .path("taxonomy").fields().forEachRemaining(entry ->
+                        report.append("| ").append(entry.getKey()).append(" | ")
+                                .append(entry.getValue().path("status").asText())
+                                .append(" | ")
+                                .append(entry.getValue().path("entryCount").asInt())
+                                .append(" |\n"));
+        report.append("\nNamed steps requiring `ci_other` review:\n\n");
+        for (JsonNode step : root.path("repositoryAnalysis")
+                .path("startCiAndBuildGates").path("ciOtherSteps")) {
+            report.append("- `").append(step.asText()).append("`\n");
         }
 
         JsonNode equivalence = root.path("repositoryAnalysis").path("startEquivalence");
@@ -4679,6 +4919,10 @@ public class CampaignEvaluator {
         int otherKnownCauseFlakyFailures;
         int unknownCauseFlakyFailures;
         boolean ciLogCaptured;
+        boolean ciFailedLogOnlyCaptured;
+        boolean ciFullLogCaptured;
+        boolean convergenceFailure;
+        String convergenceFailureReason;
 
         SessionResult(
                 int issue, int shepherdStage, Path markdown, Path jsonl, Path otel,
@@ -4741,6 +4985,11 @@ public class CampaignEvaluator {
             value.put("remoteAgentCheckObservations", remoteAgentCheckObservations);
             value.put("testsSkippedMessages", testsSkippedMessages);
             value.put("ciTestsSkippedMessages", ciTestsSkippedMessages);
+            value.put("attemptOutcome",
+                    convergenceFailure ? "convergence_failure" : "completed");
+            if (convergenceFailure) {
+                value.put("attemptOutcomeReason", convergenceFailureReason);
+            }
             ArrayNode loaded = value.putArray("loadedSkills");
             loadedSkills.forEach(loaded::add);
             ObjectNode hashes = value.putObject("skillNameHashes");
