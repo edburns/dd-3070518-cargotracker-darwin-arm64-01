@@ -349,7 +349,7 @@ public class CampaignEvaluator {
     private static boolean gitDirty(Path directory) {
         CommandResult result = command(List.of(
                 "git", "-C", directory.toString(), "status", "--porcelain",
-                "--untracked-files=no"), null, Map.of());
+                "--untracked-files=all", "--", "."), null, Map.of());
         return result.exitCode == 0 && !result.output.isBlank();
     }
 
