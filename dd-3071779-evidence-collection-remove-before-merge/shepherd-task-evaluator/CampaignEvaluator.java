@@ -129,12 +129,16 @@ public class CampaignEvaluator {
     public static void main(String[] args) {
         try {
             Config config = Config.parse(args);
-            new CampaignEvaluator(config).run();
+            CampaignEvaluator evaluator = new CampaignEvaluator(config);
+            if (config.mode == Mode.COMPARE_EVALS) {
+                evaluator.compareEvaluations();
+            } else {
+                evaluator.run();
+            }
         } catch (UsageException error) {
             System.err.println(error.getMessage());
             System.err.println();
-            System.err.println("Usage: ./evaluate-campaign <campaign-dir> --arm <control|treatment>"
-                    + " [--repo <path>] [--out <dir>] [--with-build] [--allow-unversioned]");
+            System.err.println(usage());
             System.exit(2);
         } catch (Exception error) {
             System.err.println("Evaluation failed: " + error.getMessage());
@@ -147,11 +151,13 @@ public class CampaignEvaluator {
         requireReadableCampaign();
         Files.createDirectories(config.outputDir);
 
-        JsonNode manifest = JSON.readTree(config.campaignDir
-                .resolve("shepherd-task-25-given-list-run.json").toFile());
+        JsonNode manifest = combinedManifest();
         Map<Integer, TaskResult> tasks = initializeTasks(manifest);
         List<SessionResult> sessions = analyzeSessions(tasks);
-        sessions.sort(Comparator.comparingInt((SessionResult value) -> value.issue)
+        sessions.sort(Comparator.comparingInt((SessionResult value) -> value.attempt)
+                .thenComparing(value -> value.startedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparingInt(value -> value.issue)
                 .thenComparingInt(value -> value.shepherdStage));
 
         applyFlakyRerunRules(sessions);
@@ -191,6 +197,7 @@ public class CampaignEvaluator {
         root.set("postMortemAgent", postMortem);
         root.set("unclassified", array(unclassified));
         root.set("reconciliation", reconciliation(manifest, root, tasks, sessions));
+        root.set("acceptanceChecks", acceptanceChecks(root));
 
         writeJson(config.outputDir.resolve("findings.json"), root);
         writeSummaryCsv(manifest, root, tasks, sessions);
@@ -199,6 +206,129 @@ public class CampaignEvaluator {
         writeUnclassified();
 
         System.out.println("Wrote evaluation to " + config.outputDir);
+    }
+
+    private void compareEvaluations() throws IOException {
+        Files.createDirectories(config.outputDir);
+        ArrayNode campaigns = JSON.createArrayNode();
+        Map<String, Map<String, String>> values = new LinkedHashMap<>();
+        for (Path directory : config.evaluationDirs) {
+            Path findings = directory.resolve("findings.json");
+            if (!Files.isRegularFile(findings)) {
+                throw new UsageException("Missing findings.json in evaluation directory: "
+                        + directory);
+            }
+            JsonNode root = JSON.readTree(findings.toFile());
+            String id = root.path("campaign").path("campaignId").asText(
+                    directory.getFileName().toString());
+            ObjectNode campaign = campaigns.addObject();
+            campaign.put("campaignId", id);
+            campaign.put("directory", directory.toString());
+            campaign.put("arm", root.path("campaign").path("arm").asText(""));
+            Map<String, String> observed = new LinkedHashMap<>();
+            observed.put("copilotCliVersions",
+                    root.path("runInvariants").path("copilotCliVersions").toString());
+            observed.put("stage30SkillContentLength",
+                    root.path("runInvariants").path("skillContentLengths")
+                            .path("shepherd-task-30-from-assignment-to-ready").toString());
+            observed.put("skillContentVerification",
+                    root.path("runInvariants").path("skillContentVerification")
+                            .path("status").asText("unverified"));
+            observed.put("models", root.path("runInvariants").path("models").toString());
+            observed.put("reasoningLevels",
+                    root.path("runInvariants").path("reasoningLevels").toString());
+            values.put(id, observed);
+            campaign.set("invariants", JSON.valueToTree(observed));
+        }
+        ObjectNode output = JSON.createObjectNode();
+        output.put("schemaVersion", "1.0");
+        output.set("campaigns", campaigns);
+        ArrayNode drift = output.putArray("invariantDrift");
+        Set<String> keys = values.values().stream().flatMap(map -> map.keySet().stream())
+                .collect(Collectors.toCollection(TreeSet::new));
+        for (String key : keys) {
+            Set<String> distinct = values.values().stream()
+                    .map(map -> map.getOrDefault(key, "unavailable"))
+                    .collect(Collectors.toCollection(TreeSet::new));
+            if (distinct.size() <= 1) continue;
+            ObjectNode row = drift.addObject();
+            row.put("invariant", key);
+            row.put("warning", true);
+            ObjectNode observed = row.putObject("observed");
+            values.forEach((campaign, map) ->
+                    observed.put(campaign, map.getOrDefault(key, "unavailable")));
+        }
+        writeJson(config.outputDir.resolve("invariant-drift.json"), output);
+        StringBuilder report = new StringBuilder("# Cross-campaign invariant comparison\n\n");
+        report.append("> [!WARNING]\n> Invariant differences can confound arm comparisons.\n\n")
+                .append("| Invariant | Campaign values |\n|---|---|\n");
+        for (JsonNode row : drift) {
+            report.append("| ").append(row.path("invariant").asText()).append(" | ")
+                    .append(row.path("observed").toString().replace("|", "\\|"))
+                    .append(" |\n");
+        }
+        if (drift.isEmpty()) report.append("| none | no differences observed |\n");
+        report.append("\nReference observation: control CLI `1.0.89` versus treatment `1.0.91`; ")
+                .append("stage-30 skill content length `25804` versus `27427`. ")
+                .append("Skill identity is unverified unless a skill-content hash artifact is present.\n");
+        Files.writeString(config.outputDir.resolve("report.md"), report,
+                StandardCharsets.UTF_8, StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING);
+        System.out.println("Wrote comparison to " + config.outputDir);
+    }
+
+    private static String usage() {
+        return """
+                Usage:
+                  ./evaluate-campaign <campaign-dir> --arm <control|treatment> [options]
+                  ./evaluate-campaign --combine <dir1> <dir2> ... --arm <control|treatment> [options]
+                  ./evaluate-campaign --compare-evals <eval-dir1> <eval-dir2> ... --out <dir> [options]
+                Options:
+                  --repo <path> --control-start <repo-path>@<sha> --out <dir>
+                  --with-build --allow-unversioned --evaluator-dir <dir>
+                """.strip();
+    }
+
+    private JsonNode combinedManifest() throws IOException {
+        ObjectNode combined = null;
+        String campaignId = null;
+        Instant previousStart = null;
+        Set<Integer> issues = new TreeSet<>();
+        for (Path directory : config.campaignDirs) {
+            ObjectNode current = (ObjectNode) JSON.readTree(directory
+                    .resolve("shepherd-task-25-given-list-run.json").toFile());
+            String currentId = current.path("campaignId").asText();
+            if (campaignId == null) campaignId = currentId;
+            if (!Objects.equals(campaignId, currentId)) {
+                throw new UsageException("--combine directories must have the same campaignId.");
+            }
+            Instant start = parseInstant(current.path("startedAt").asText());
+            if (previousStart != null && start != null && start.isBefore(previousStart)) {
+                throw new UsageException("--combine directories must be ordered by startedAt.");
+            }
+            if (start != null) previousStart = start;
+            current.path("taskIssues").forEach(value -> issues.add(value.asInt()));
+            if (combined == null) {
+                combined = current.deepCopy();
+            } else {
+                copy(current, combined, "completedAt");
+                copy(current, combined, "status");
+                copy(current, combined, "exitCode");
+            }
+        }
+        if (combined == null) throw new UsageException("No campaign directories supplied.");
+        ArrayNode taskIssues = combined.putArray("taskIssues");
+        issues.forEach(taskIssues::add);
+        combined.put("combinedDirectoryCount", config.campaignDirs.size());
+        return combined;
+    }
+
+    private static Instant parseInstant(String value) {
+        try {
+            return value == null || value.isBlank() ? null : Instant.parse(value);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
     }
 
     private String readVersion(Path directory) {
@@ -224,12 +354,14 @@ public class CampaignEvaluator {
     }
 
     private void requireReadableCampaign() throws IOException {
-        if (!Files.isDirectory(config.campaignDir)) {
-            throw new UsageException("Campaign directory does not exist: " + config.campaignDir);
-        }
-        Path manifest = config.campaignDir.resolve("shepherd-task-25-given-list-run.json");
-        if (!Files.isRegularFile(manifest)) {
-            throw new UsageException("Missing campaign manifest: " + manifest);
+        for (Path campaignDir : config.campaignDirs) {
+            if (!Files.isDirectory(campaignDir)) {
+                throw new UsageException("Campaign directory does not exist: " + campaignDir);
+            }
+            Path manifest = campaignDir.resolve("shepherd-task-25-given-list-run.json");
+            if (!Files.isRegularFile(manifest)) {
+                throw new UsageException("Missing campaign manifest: " + manifest);
+            }
         }
         if (config.repo != null && !Files.isDirectory(config.repo.resolve(".git"))) {
             CommandResult result = command(
@@ -251,26 +383,32 @@ public class CampaignEvaluator {
 
     private List<SessionResult> analyzeSessions(Map<Integer, TaskResult> tasks) throws Exception {
         List<SessionResult> sessions = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(
-                config.campaignDir, "phase*-task-*.md")) {
-            for (Path markdown : stream) {
-                Matcher matcher = SESSION_FILE.matcher(markdown.getFileName().toString());
-                if (!matcher.matches()) {
-                    continue;
-                }
-                int phase = Integer.parseInt(matcher.group(1));
-                int issue = Integer.parseInt(matcher.group(3));
-                int stage = phase == 1 ? 30 : 40;
-                Path jsonl = replaceSuffix(markdown, ".md", ".jsonl");
-                Path otel = config.campaignDir.resolve(
-                        markdown.getFileName().toString()
-                                .replace("-task-", "-otel-")
-                                .replace(".md", ".jsonl"));
-                SessionResult session = analyzeSession(issue, stage, markdown, jsonl, otel);
-                sessions.add(session);
-                tasks.computeIfAbsent(issue, TaskResult::new).sessions.add(session);
-                if (stage == 40 && session.prNumber != null) {
-                    tasks.get(issue).prNumber = session.prNumber;
+        for (int directoryIndex = 0; directoryIndex < config.campaignDirs.size();
+                directoryIndex++) {
+            Path campaignDir = config.campaignDirs.get(directoryIndex);
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(
+                    campaignDir, "phase*-task-*.md")) {
+                for (Path markdown : stream) {
+                    Matcher matcher = SESSION_FILE.matcher(markdown.getFileName().toString());
+                    if (!matcher.matches()) {
+                        continue;
+                    }
+                    int phase = Integer.parseInt(matcher.group(1));
+                    int issue = Integer.parseInt(matcher.group(3));
+                    int stage = phase == 1 ? 30 : 40;
+                    Path jsonl = replaceSuffix(markdown, ".md", ".jsonl");
+                    Path otel = campaignDir.resolve(
+                            markdown.getFileName().toString()
+                                    .replace("-task-", "-otel-")
+                                    .replace(".md", ".jsonl"));
+                    SessionResult session = analyzeSession(
+                            issue, stage, markdown, jsonl, otel,
+                            campaignDir, directoryIndex + 1);
+                    sessions.add(session);
+                    tasks.computeIfAbsent(issue, TaskResult::new).sessions.add(session);
+                    if (session.prNumber != null) {
+                        tasks.get(issue).prNumber = session.prNumber;
+                    }
                 }
             }
         }
@@ -281,8 +419,10 @@ public class CampaignEvaluator {
     }
 
     private SessionResult analyzeSession(
-            int issue, int stage, Path markdown, Path jsonl, Path otel) throws Exception {
-        SessionResult result = new SessionResult(issue, stage, markdown, jsonl, otel);
+            int issue, int stage, Path markdown, Path jsonl, Path otel,
+            Path campaignDirectory, int attempt) throws Exception {
+        SessionResult result = new SessionResult(
+                issue, stage, markdown, jsonl, otel, campaignDirectory, attempt);
         String transcript = Files.readString(markdown, StandardCharsets.UTF_8);
         List<String> lines = Files.readAllLines(markdown, StandardCharsets.UTF_8);
         parseTranscriptHeader(result, lines);
@@ -431,6 +571,7 @@ public class CampaignEvaluator {
                 } else if ("tool.execution_complete".equals(type)) {
                     result.toolCalls++;
                     String completedAt = event.path("timestamp").asText("");
+                    result.toolCompletionTimestamps.add(completedAt);
                     if (data.path("success").asBoolean()) {
                         result.toolSuccessTrue++;
                     } else {
@@ -625,6 +766,10 @@ public class CampaignEvaluator {
                 currentHead = headRef.group(1);
             }
             block.headSha = currentHead;
+            if (session.toolBlocks.size() < session.toolCompletionTimestamps.size()) {
+                block.jsonlCompletedAt = session.toolCompletionTimestamps.get(
+                        session.toolBlocks.size());
+            }
             session.toolBlocks.add(block);
             if (block.output.contains("Tests are skipped.")) {
                 session.testsSkippedMessages++;
@@ -634,6 +779,7 @@ public class CampaignEvaluator {
                 }
             }
             recordJavaInvocation(session, block);
+            parseCiTestSummaries(session, block);
             classifyToolBlock(session, block);
             parseTransitions(session, block);
             parseReviewEvidence(session, block);
@@ -641,6 +787,34 @@ public class CampaignEvaluator {
             parseCommitEvidence(session, block);
         }
         calculateCcaWait(session);
+    }
+
+    private static void parseCiTestSummaries(SessionResult session, ToolBlock block) {
+        if (block.command == null || !block.command.contains("gh run view")
+                || !block.command.contains("--log")) {
+            return;
+        }
+        session.ciLogCaptured = true;
+        String run = "unknown";
+        Matcher runId = Pattern.compile("gh\\s+run\\s+view\\s+(\\d+)").matcher(block.command);
+        if (runId.find()) run = runId.group(1);
+        String[] lines = block.output.split("\\R");
+        for (int index = 0; index < lines.length; index++) {
+            Matcher summary = TEST_SUMMARY.matcher(lines[index]);
+            while (summary.find()) {
+                String context = String.join("\n", Arrays.copyOfRange(lines,
+                        Math.max(0, index - 8), Math.min(lines.length, index + 2)))
+                        .toLowerCase(Locale.ROOT);
+                String provider = context.contains("failsafe")
+                        || context.contains("integration-test")
+                        ? "failsafe" : "surefire";
+                session.ciTestSummaries.add(new CiTestSummary(
+                        run, provider, Integer.parseInt(summary.group(1)),
+                        Integer.parseInt(summary.group(2)),
+                        Integer.parseInt(summary.group(3)),
+                        Integer.parseInt(summary.group(4))));
+            }
+        }
     }
 
     private static ToolBlock parseToolBlock(
@@ -799,14 +973,19 @@ public class CampaignEvaluator {
                     detector(block), block.exitCode, classification);
             block.testFailureEvents.add(event);
         }
-        for (String line : block.output.split("\\R")) {
-            if (isFailedCiLine(line)) {
+        for (String check : failedCiChecks(block.output)) {
+            if (!isCopilotOrchestrationCheck(check)) {
+                String gate = ciGate(check);
                 ObjectNode classification = classification(
                         "product_defect", null, "FAILED_CI_CHECK",
                         "A completed CI check reported failure.");
-                addEvent(session, block, "failed_ci_check", "ci", null, classification)
-                        .put("commandOrCheck", excerpt(line.trim(), 300));
+                ObjectNode event = addEvent(session, block, "failed_ci_check",
+                        gate, null, classification);
+                event.put("commandOrCheck", excerpt(check, 300));
+                event.put("where", "ci");
             }
+        }
+        for (String line : block.output.split("\\R")) {
             if (line.trim().startsWith("SHEPHERD FAILED:")) {
                 addEvent(session, block, "acceptance_failure", "functional_acceptance",
                         block.exitCode, classifyFailure(block));
@@ -822,6 +1001,13 @@ public class CampaignEvaluator {
         if (text.contains("playwright") || text.contains("chromium")
                 || text.contains("http://localhost")) {
             return "functional_acceptance";
+        }
+        if (text.contains("spotless") || text.contains("formatting")
+                || text.contains("format check")) {
+            return "formatting";
+        }
+        if (text.contains("source-gates") || text.contains("source gates")) {
+            return "static_analysis";
         }
         if (isContainerTest(block)) {
             return "arquillian_container_tests";
@@ -844,6 +1030,18 @@ public class CampaignEvaluator {
         return "functional_acceptance";
     }
 
+    private static String failedCiCheckName(String line) {
+        try {
+            JsonNode node = JSON.readTree(line.trim());
+            return firstText(node, "name", "context", "workflowName");
+        } catch (JsonProcessingException ignored) {
+            Matcher matcher = Pattern.compile(
+                    "\"(?:name|context|workflowName)\"\\s*:\\s*\"([^\"]+)\"")
+                    .matcher(line);
+            return matcher.find() ? matcher.group(1) : null;
+        }
+    }
+
     private static boolean isContainerTest(ToolBlock block) {
         String text = ((block.command == null ? "" : block.command) + "\n" + block.output)
                 .toLowerCase(Locale.ROOT);
@@ -862,11 +1060,42 @@ public class CampaignEvaluator {
                 || lower.contains("surefire") || lower.contains("failsafe");
     }
 
-    private static boolean isFailedCiLine(String line) {
-        String compact = line.replace(" ", "").toLowerCase(Locale.ROOT);
-        return compact.contains("\"conclusion\":\"failure\"")
-                || compact.contains("\"conclusion\":\"timed_out\"")
-                || compact.contains("\"conclusion\":\"cancelled\"");
+    private static List<String> failedCiChecks(String output) {
+        Set<String> checks = new LinkedHashSet<>();
+        for (JsonNode root : parseJsonValues(output)) {
+            Deque<JsonNode> pending = new ArrayDeque<>();
+            pending.add(root);
+            while (!pending.isEmpty()) {
+                JsonNode node = pending.removeFirst();
+                if (node.isContainerNode()) {
+                    node.elements().forEachRemaining(pending::addLast);
+                }
+                if (!node.isObject()) {
+                    continue;
+                }
+                String conclusion = node.path("conclusion").asText().toLowerCase(Locale.ROOT);
+                if (Set.of("failure", "timed_out", "cancelled").contains(conclusion)) {
+                    String name = firstText(node, "name", "context", "workflowName");
+                    if (name != null && !name.isBlank()) {
+                        checks.add(name);
+                    }
+                }
+            }
+        }
+        Matcher tabular = Pattern.compile(
+                "(?m)^([^\\t\\r\\n]+)\\t(?:fail|failure|timed_out|cancelled)\\t")
+                .matcher(output);
+        while (tabular.find()) {
+            checks.add(tabular.group(1).trim());
+        }
+        return new ArrayList<>(checks);
+    }
+
+    private static boolean isCopilotOrchestrationCheck(String check) {
+        String lower = check.toLowerCase(Locale.ROOT).trim();
+        return lower.equals("copilot")
+                || lower.contains("running copilot cloud agent")
+                || lower.matches("addressing comment on pr #?\\d+");
     }
 
     private ObjectNode classifyFailure(ToolBlock block) {
@@ -888,6 +1117,11 @@ public class CampaignEvaluator {
             return classification("agent_operational_error", "missing_campaign_metadata",
                     "INVALID_REMOTE_RESOURCE_LOOKUP",
                     "The command requested a repository resource or encoded payload that did not exist.");
+        }
+        if (lower.contains("bot comments require inspection")) {
+            return classification("agent_operational_error", "review_gate_pending",
+                    "BOT_COMMENT_REVIEW_REQUIRED",
+                    "The stage gate stopped for manual inspection of bot comments.");
         }
         if (lower.contains("expected \"actual\" to be strictly unequal")
                 && lower.contains("12/15/2026")) {
@@ -933,6 +1167,38 @@ public class CampaignEvaluator {
                     "CODE_OR_TEST_FAILURE",
                     "The code under change failed compilation or a test assertion.");
         }
+        boolean failedFormatting = lower.contains("spotless")
+                && (lower.contains("build failure") || lower.contains("[error]")
+                || lower.matches("(?s).*formatting\\s+(?:fail|failure)\\b.*")
+                || lower.matches("(?s).*\"name\"\\s*:\\s*\"formatting\".*"
+                + "\"conclusion\"\\s*:\\s*\"failure\".*"));
+        if (failedFormatting) {
+            return classification("product_defect", "style",
+                    "FORMATTING_GATE_FAILURE",
+                    "The formatting or Spotless gate reported a violation.");
+        }
+        boolean failedSourceGate = (lower.contains("source-gates")
+                || lower.contains("source gates") || lower.contains("verify-source-gates"))
+                && (lower.contains("build failure") || lower.contains("[error]")
+                || lower.matches("(?s).*source-gates\\s+(?:fail|failure)\\b.*")
+                || lower.matches("(?s).*\"name\"\\s*:\\s*\"source-gates\".*"
+                + "\"conclusion\"\\s*:\\s*\"failure\".*"));
+        if (failedSourceGate) {
+            return classification("product_defect", "static_analysis_finding",
+                    "SOURCE_GATE_FAILURE",
+                    "The repository source-gates check reported a violation.");
+        }
+        List<String> failedChecks = failedCiChecks(text);
+        if (!failedChecks.isEmpty()) {
+            String check = failedChecks.get(0);
+            String gate = ciGate(check);
+            return classification("product_defect",
+                    "formatting".equals(gate) ? "style"
+                            : "static_analysis".equals(gate)
+                            ? "static_analysis_finding" : "behavioral_defect",
+                    "FAILED_CI_CHECK",
+                    "The substantive CI check '" + check + "' reported failure.");
+        }
         return unclassifiedClassification(
                 "No deterministic product, operational, or infrastructure rule matched.");
     }
@@ -976,10 +1242,15 @@ public class CampaignEvaluator {
             event.put("prNumber", session.prNumber);
         }
         event.put("sessionId", session.sessionId == null ? "" : session.sessionId);
+        event.put("attempt", session.attempt);
+        event.put("campaignDirectory", session.campaignDirectory.toString());
         event.put("shepherdStage", session.shepherdStage);
         event.put("eventKind", kind);
         event.put("relativeOffsetSeconds", block.relativeSeconds);
-        if (session.startedAt == null) {
+        if (block.jsonlCompletedAt != null && !block.jsonlCompletedAt.isBlank()) {
+            event.put("timestamp", block.jsonlCompletedAt);
+            event.put("timestampSource", "jsonl_tool_execution_complete");
+        } else if (session.startedAt == null) {
             event.putNull("timestamp");
             event.put("timestampSource", "unavailable");
         } else {
@@ -994,9 +1265,32 @@ public class CampaignEvaluator {
         boolean productDefect = "product_defect".equals(
                 classification.path("category").asText());
         if (productDefect) {
-            event.put("detectionGate", gate);
+            String failingStep = isCiBlock(block) ? ciFailingStep(block.output) : null;
+            String normalizedGate = failingStep == null
+                    ? gate == null || gate.isBlank() || "ci".equals(gate)
+                    ? "ci_other" : gate
+                    : ciGate(failingStep);
+            event.put("detectionGate", normalizedGate);
+            if (classification.path("subtype").isNull()
+                    || classification.path("subtype").asText().isBlank()) {
+                ((ObjectNode) classification).put("subtype",
+                        "formatting".equals(normalizedGate) ? "style"
+                                : "static_analysis".equals(normalizedGate)
+                                ? "static_analysis_finding" : "behavioral_defect");
+            }
+            event.put("defectClass", defectClass(normalizedGate,
+                    classification.path("subtype").asText(), kind));
         } else {
             event.putNull("detectionGate");
+            event.putNull("defectClass");
+        }
+        event.put("where", isCiBlock(block) ? "ci" : "local");
+        if (isCiBlock(block)) {
+            String failingStep = ciFailingStep(block.output);
+            if (failingStep != null) {
+                event.put("ciFailingStep", failingStep);
+                event.put("ciFailingStepGate", ciGate(failingStep));
+            }
         }
         event.put("activity", activity(block));
         event.put("commandOrCheck", excerpt(block.command == null ? block.tool : block.command, 600));
@@ -1024,6 +1318,35 @@ public class CampaignEvaluator {
         events.add(event);
         session.eventIds.add(event.path("id").asText());
         return event;
+    }
+
+    private static boolean isCiBlock(ToolBlock block) {
+        String command = Objects.toString(block.command, "").toLowerCase(Locale.ROOT);
+        return command.contains("gh run view") && command.contains("--log")
+                || command.contains("gh pr checks");
+    }
+
+    private static String ciFailingStep(String output) {
+        String candidate = null;
+        for (String line : output.split("\\R")) {
+            String cleaned = line.replaceFirst(
+                    "^\\S+\\s+\\S+\\s+\\d{4}-\\d{2}-\\d{2}T\\S+\\s+", "").trim();
+            Matcher group = Pattern.compile("##\\[group](?:Run\\s+)?(.+)").matcher(cleaned);
+            if (group.find()) candidate = group.group(1).trim();
+            Matcher error = Pattern.compile("##\\[error](.+)").matcher(cleaned);
+            if (error.find() && candidate != null) return candidate;
+        }
+        return candidate;
+    }
+
+    private static String defectClass(String gate, String subtype, String kind) {
+        if ("formatting".equals(gate) || "style".equals(subtype)
+                || kind.contains("format")) return "style";
+        if ("static_analysis".equals(gate)) return "static_analysis_finding";
+        if ("stage_30_gate".equals(gate) || "completeness_gap".equals(subtype)) {
+            return "completeness";
+        }
+        return "behavioral";
     }
 
     private static String activity(ToolBlock block) {
@@ -1151,7 +1474,7 @@ public class CampaignEvaluator {
                 && Set.of("SUCCESS", "FAILURE", "ERROR", "CANCELLED", "TIMED_OUT",
                 "success", "failure", "error", "cancelled", "timed_out")
                 .contains(conclusion)) {
-            if ("Running Copilot cloud agent".equalsIgnoreCase(check)) {
+            if (isOrchestrationCheck(check)) {
                 session.remoteAgentCheckObservations++;
                 return;
             }
@@ -1173,6 +1496,13 @@ public class CampaignEvaluator {
         node.fields().forEachRemaining(entry ->
                 collectTransitions(session, block, entry.getValue(), childHead,
                         insideSteps || "steps".equals(entry.getKey())));
+    }
+
+    private static boolean isOrchestrationCheck(String check) {
+        String lower = check.toLowerCase(Locale.ROOT);
+        return lower.equals("running copilot cloud agent")
+                || lower.matches("addressing comment on pr #\\d+")
+                || lower.equals("copilot") || lower.startsWith("copilot /");
     }
 
     private static String firstText(JsonNode node, String... fields) {
@@ -1278,7 +1608,8 @@ public class CampaignEvaluator {
                         "stage_30_gate", null, classification);
                 Matcher pr = Pattern.compile("PR_NUMBER=(\\d+)").matcher(block.command);
                 if (pr.find()) {
-                    event.put("prNumber", Integer.parseInt(pr.group(1)));
+                    session.prNumber = Integer.parseInt(pr.group(1));
+                    event.put("prNumber", session.prNumber);
                 }
                 Matcher submitted = Pattern.compile(
                         "REVIEW_SUBMITTED_AT=(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)")
@@ -1296,6 +1627,7 @@ public class CampaignEvaluator {
                             "command_output_copilot_work_finished");
                 }
                 ((ObjectNode) event.path("evidence")).put("excerpt", summary);
+                event.put("itemCount", changeRequestItemCount(summary));
             }
             return;
         }
@@ -1333,11 +1665,21 @@ public class CampaignEvaluator {
                         }
                         ((ObjectNode) event.path("evidence")).put(
                                 "excerpt", excerpt(node.path("body").asText(), 1200));
+                        event.put("itemCount",
+                                changeRequestItemCount(node.path("body").asText()));
                     }
                 }
                 node.elements().forEachRemaining(pending::addLast);
             }
         }
+    }
+
+    private static int changeRequestItemCount(String body) {
+        long bullets = Arrays.stream(body.split("\\R"))
+                .map(String::strip)
+                .filter(line -> line.matches("(?:[-*]|\\d+[.)])\\s+.+"))
+                .count();
+        return (int) Math.max(1, bullets);
     }
 
     private static String substantiveReviewSummary(String command) {
@@ -1375,9 +1717,29 @@ public class CampaignEvaluator {
             int issue = event.path("taskIssue").asInt();
             if ("product_defect".equals(category)) {
                 TaskResult task = tasks.get(issue);
+                if (event.path("prNumber").isNull()
+                        && task != null && task.prNumber != null) {
+                    event.put("prNumber", task.prNumber);
+                }
                 if (task != null && task.gitTask != null) {
+                    String detectedHead = event.path("headSha").asText("");
+                    String fixedHead = task.gitTask.headSha;
+                    if (detectedHead.isBlank()) {
+                        resolution.put("status", "unknown");
+                        resolution.put("summary",
+                                "No detected head SHA was captured, so fix ancestry cannot be verified.");
+                        continue;
+                    }
+                    if (detectedHead.equals(fixedHead)
+                            || !isAncestor(config.repo, detectedHead, fixedHead)) {
+                        resolution.put("status", "unresolved");
+                        resolution.put("headSha", fixedHead);
+                        resolution.put("summary",
+                                "The candidate fix must differ from and descend from the detected head.");
+                        continue;
+                    }
                     resolution.put("status", "fixed");
-                    resolution.put("headSha", task.gitTask.headSha);
+                    resolution.put("headSha", fixedHead);
                     if (event.path("fixTimestampHint").isTextual()) {
                         resolution.put("timestamp", event.path("fixTimestampHint").asText());
                         resolution.put("timestampSource",
@@ -1451,6 +1813,11 @@ public class CampaignEvaluator {
                 }
             }
         }
+    }
+
+    private static boolean isAncestor(Path repo, String ancestor, String descendant) {
+        return command(List.of("git", "-C", repo.toString(), "merge-base",
+                "--is-ancestor", ancestor, descendant), null, Map.of()).exitCode == 0;
     }
 
     private static void countHallucinations(SessionResult session, ToolBlock block) {
@@ -1580,6 +1947,10 @@ public class CampaignEvaluator {
                 copyNullable(event, defect, "prNumber");
                 defect.put("categorySubtype",
                         event.path("classification").path("subtype").asText());
+                defect.put("defectClass", event.path("defectClass").asText("behavioral"));
+                defect.put("itemCount",
+                        "stage_30_change_request".equals(event.path("eventKind").asText())
+                                ? 1 : event.path("itemCount").asInt(1));
                 defect.put("summary", summarizeDefect(event));
                 ObjectNode first = defect.putObject("firstDetection");
                 first.put("eventId", event.path("id").asText());
@@ -1591,9 +1962,11 @@ public class CampaignEvaluator {
                 copyNullable(event, first, "headSha");
                 defect.putArray("occurrenceEventIds");
                 ObjectNode resolution = defect.putObject("resolution");
-                resolution.put("status",
-                        event.path("resolution").path("status").asText("unknown"));
-                if (event.path("resolution").path("headSha").isTextual()) {
+                String resolutionStatus = event.path("resolution")
+                        .path("status").asText("unknown");
+                resolution.put("status", resolutionStatus);
+                if ("fixed".equals(resolutionStatus)
+                        && event.path("resolution").path("headSha").isTextual()) {
                     String commit = event.path("resolution").path("headSha").asText();
                     resolution.put("commit", commit);
                     Instant fixedAt = event.path("resolution").path("timestamp").isTextual()
@@ -1605,9 +1978,13 @@ public class CampaignEvaluator {
                                 event.path("resolution").path("timestampSource")
                                         .asText("git_commit_timestamp"));
                         if (event.path("timestamp").isTextual()) {
-                            resolution.put("timeToFixSeconds", Math.max(0,
-                                    Duration.between(Instant.parse(event.path("timestamp").asText()),
-                                            fixedAt).getSeconds()));
+                            long seconds = Duration.between(
+                                    Instant.parse(event.path("timestamp").asText()),
+                                    fixedAt).getSeconds();
+                            resolution.put("timeToFixSeconds", seconds);
+                            if (seconds < 0) {
+                                resolution.put("anomaly", "negative_time_to_fix");
+                            }
                         }
                     } else {
                         resolution.putNull("fixedAt");
@@ -1619,6 +1996,9 @@ public class CampaignEvaluator {
                     resolution.putNull("timeToFixSeconds");
                 }
                 defects.put(fingerprint, defect);
+            } else if ("stage_30_change_request".equals(event.path("eventKind").asText())) {
+                defect.put("itemCount", defect.path("itemCount").asInt() + 1);
+                continue;
             }
             ((ArrayNode) defect.path("occurrenceEventIds")).add(event.path("id").asText());
             defect.put("occurrenceCount",
@@ -1640,6 +2020,11 @@ public class CampaignEvaluator {
     }
 
     private static String defectFingerprint(ObjectNode event) {
+        if ("stage_30_change_request".equals(event.path("eventKind").asText())) {
+            return event.path("taskIssue").asText() + "|stage30|"
+                    + event.path("timestamp").asText(event.path("evidence")
+                    .path("excerpt").asText());
+        }
         String excerpt = event.path("evidence").path("excerpt").asText()
                 .toLowerCase(Locale.ROOT)
                 .replaceAll("[0-9a-f]{7,40}", "<sha>")
@@ -1658,6 +2043,9 @@ public class CampaignEvaluator {
         String firstLine = Arrays.stream(excerpt.split("\\R"))
                 .map(String::trim)
                 .filter(Predicate.not(String::isBlank))
+                .filter(line -> !line.startsWith("@copilot"))
+                .filter(line -> !line.startsWith("REVIEW_BODY="))
+                .filter(line -> !line.startsWith("##"))
                 .findFirst()
                 .orElse(event.path("eventKind").asText());
         return excerpt(firstLine, 300);
@@ -1721,12 +2109,14 @@ public class CampaignEvaluator {
     }
 
     private ObjectNode analyzePostMortem() throws IOException {
-        List<Path> jsonlFiles;
-        try (var stream = Files.list(config.campaignDir)) {
-            jsonlFiles = stream.filter(path ->
-                            path.getFileName().toString().startsWith("post-mortem-session-")
-                                    && path.getFileName().toString().endsWith(".jsonl"))
-                    .sorted().toList();
+        List<Path> jsonlFiles = new ArrayList<>();
+        for (Path directory : config.campaignDirs) {
+            try (var stream = Files.list(directory)) {
+                jsonlFiles.addAll(stream.filter(path ->
+                                path.getFileName().toString().startsWith("post-mortem-session-")
+                                        && path.getFileName().toString().endsWith(".jsonl"))
+                        .sorted().toList());
+            }
         }
         if (jsonlFiles.isEmpty()) {
             return unavailableSection("No post-mortem session JSONL was present.");
@@ -1793,8 +2183,20 @@ public class CampaignEvaluator {
                 .sorted(Comparator.comparing(value -> value.mergeTime)).toList();
         String startSha = ordered.get(0).baseSha;
         String finalSha = ordered.get(ordered.size() - 1).mergeSha;
+        String startRoot = inferMavenProjectRoot(config.repo, startSha);
+        String finalRoot = inferMavenProjectRoot(config.repo, finalSha);
         result.put("startSha", startSha);
         result.put("finalSha", finalSha);
+        result.put("startProjectRoot", startRoot);
+        result.put("finalProjectRoot", finalRoot);
+        ObjectNode roots = result.putObject("projectRootsBySha");
+        roots.put(startSha, startRoot);
+        roots.put(finalSha, finalRoot);
+        ObjectNode buildConfiguration = result.putObject("buildConfigurationBySha");
+        buildConfiguration.set(startSha,
+                mavenBuildConfiguration(config.repo, startSha, startRoot));
+        buildConfiguration.set(finalSha,
+                mavenBuildConfiguration(config.repo, finalSha, finalRoot));
 
         ArrayNode perTask = result.putArray("tasks");
         DiffMetrics campaignDiff = diffMetrics(startSha, finalSha);
@@ -1817,16 +2219,30 @@ public class CampaignEvaluator {
                             : metric(BigDecimal.valueOf(comments * 100.0 / changedLines)
                                     .setScale(3, RoundingMode.HALF_UP),
                             "derived", "CCRA comments / changed lines * 100."));
-            node.set("testIntegrity", testIntegrity(startSha, task.headSha));
+            String taskRoot = inferMavenProjectRoot(config.repo, task.headSha);
+            roots.put(task.headSha, taskRoot);
+            node.put("projectRoot", taskRoot);
+            node.set("testIntegrity", testIntegrity(startSha, task.headSha,
+                    startRoot, taskRoot));
             perTask.add(node);
         }
         result.set("campaignDiff", campaignDiff.toJson());
         result.set("baselineVerification", baselineVerification(startSha));
-        result.set("testIntegrity", testIntegrity(startSha, finalSha));
-        result.set("dry", cpdComparison(startSha, finalSha));
+        result.set("startCiAndBuildGates",
+                analyzeStartCiAndBuild(config.repo, startSha, startRoot));
+        result.set("testIntegrity", testIntegrity(
+                startSha, finalSha, startRoot, finalRoot));
+        result.set("dry", cpdComparison(startSha, finalSha, startRoot, finalRoot));
         result.set("buildWarnings", config.withBuild
-                ? buildWarningComparison(startSha, finalSha)
+                ? buildWarningComparison(startSha, finalSha, startRoot, finalRoot)
                 : unavailableSection("Build analysis was not requested; pass --with-build."));
+        if (config.controlStart != null) {
+            result.set("startEquivalence", compareStarts(
+                    config.controlStart, new RepoRevision(config.repo, startSha)));
+        } else {
+            result.set("startEquivalence", unavailableSection(
+                    "Pass --control-start <repo-path>@<sha> for cross-arm equivalence."));
+        }
         return result;
     }
 
@@ -1862,6 +2278,7 @@ public class CampaignEvaluator {
     }
 
     private DiffMetrics diffMetrics(String from, String to) {
+        String projectRoot = inferMavenProjectRoot(config.repo, to);
         CommandResult numstat = command(List.of(
                 "git", "-C", config.repo.toString(), "diff", "--numstat", from, to),
                 null, Map.of());
@@ -1880,11 +2297,11 @@ public class CampaignEvaluator {
             result.files++;
             result.additions += additions;
             result.deletions += deletions;
-            FileKind kind = fileKind(path);
+            FileKind kind = fileKind(path, projectRoot);
             result.byKind.get(kind).files++;
             result.byKind.get(kind).additions += additions;
             result.byKind.get(kind).deletions += deletions;
-            if (isBuildFile(path)) {
+            if (isProjectBuildFile(path, projectRoot)) {
                 result.buildFilesChanged++;
             }
         }
@@ -1910,7 +2327,16 @@ public class CampaignEvaluator {
     }
 
     private static FileKind fileKind(String path) {
-        String lower = path.toLowerCase(Locale.ROOT);
+        return fileKind(path, ".");
+    }
+
+    private static FileKind fileKind(String path, String projectRoot) {
+        String relative = path;
+        if (projectRoot != null && !projectRoot.isBlank() && !".".equals(projectRoot)
+                && path.startsWith(projectRoot + "/")) {
+            relative = path.substring(projectRoot.length() + 1);
+        }
+        String lower = relative.toLowerCase(Locale.ROOT);
         if (lower.contains("/test/") || lower.startsWith("src/test")) {
             return FileKind.TEST;
         }
@@ -1922,6 +2348,16 @@ public class CampaignEvaluator {
         return FileKind.PRODUCTION;
     }
 
+    private static boolean isProjectBuildFile(String path, String projectRoot) {
+        return path.equals(joinRoot(projectRoot, "pom.xml"))
+                || path.equals(joinRoot(projectRoot, "build.gradle"))
+                || path.equals(joinRoot(projectRoot, "build.gradle.kts"))
+                || path.equals(joinRoot(projectRoot, "settings.gradle"))
+                || path.equals(joinRoot(projectRoot, "settings.gradle.kts"))
+                || path.equals(joinRoot(projectRoot, "mvnw"))
+                || path.equals(joinRoot(projectRoot, "gradlew"));
+    }
+
     private static boolean isBuildFile(String path) {
         String name = Paths.get(path).getFileName().toString();
         return name.equals("pom.xml") || name.equals("build.gradle")
@@ -1930,19 +2366,21 @@ public class CampaignEvaluator {
                 || name.equals("gradlew");
     }
 
-    private ObjectNode testIntegrity(String from, String to) {
+    private ObjectNode testIntegrity(
+            String from, String to, String fromRoot, String toRoot) {
         ObjectNode result = JSON.createObjectNode();
         ObjectNode baseline = result.putObject("baseline");
         baseline.put("startSha", from);
-        String pom = gitShow(from, "pom.xml");
+        baseline.put("projectRoot", fromRoot);
+        String pom = gitShow(config.repo, from, joinRoot(fromRoot, "pom.xml"));
         boolean skipTests = Pattern.compile(
                 "<skipTests>\\s*true\\s*</skipTests>", Pattern.CASE_INSENSITIVE)
                 .matcher(pom).find();
         baseline.put("testsRunByDefault", !skipTests);
         baseline.put("skipTests", skipTests);
-        baseline.put("mavenCompilerSource", pomProperty(pom, "maven.compiler.source"));
-        baseline.put("mavenCompilerTarget", pomProperty(pom, "maven.compiler.target"));
-        String release = pomProperty(pom, "maven.compiler.release");
+        baseline.put("mavenCompilerSource", compilerSetting(pom, "source"));
+        baseline.put("mavenCompilerTarget", compilerSetting(pom, "target"));
+        String release = compilerSetting(pom, "release");
         if (release == null) baseline.putNull("mavenCompilerRelease");
         else baseline.put("mavenCompilerRelease", release);
         baseline.put("testExecutionMode",
@@ -1969,7 +2407,8 @@ public class CampaignEvaluator {
         int testDeleted = 0;
         for (String line : names.output.split("\\R")) {
             String[] fields = line.split("\\t");
-            if (fields.length < 2 || fileKind(fields[fields.length - 1]) != FileKind.TEST) {
+            if (fields.length < 2
+                    || fileKind(fields[fields.length - 1], toRoot) != FileKind.TEST) {
                 continue;
             }
             if (fields[0].startsWith("D")) {
@@ -2056,6 +2495,37 @@ public class CampaignEvaluator {
         return matcher.find() ? matcher.group(1).trim() : null;
     }
 
+    private static String compilerSetting(String pom, String name) {
+        String property = pomProperty(pom, "maven.compiler." + name);
+        if (property != null) return property;
+        Matcher plugin = Pattern.compile(
+                "<plugin>.*?<artifactId>\\s*maven-compiler-plugin\\s*</artifactId>"
+                        + "(.*?)</plugin>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE)
+                .matcher(pom);
+        if (!plugin.find()) return null;
+        return xmlValue(plugin.group(1), name);
+    }
+
+    private static ObjectNode mavenBuildConfiguration(
+            Path repo, String sha, String projectRoot) {
+        String pom = gitShow(repo, sha, joinRoot(projectRoot, "pom.xml"));
+        ObjectNode value = JSON.createObjectNode();
+        value.put("projectRoot", projectRoot);
+        putNullable(value, "compilerSource", compilerSetting(pom, "source"));
+        putNullable(value, "compilerTarget", compilerSetting(pom, "target"));
+        putNullable(value, "compilerRelease", compilerSetting(pom, "release"));
+        boolean skipTests = Pattern.compile(
+                "<(?:skipTests|maven\\.test\\.skip)>\\s*true\\s*</",
+                Pattern.CASE_INSENSITIVE).matcher(pom).find();
+        value.put("skipTests", skipTests);
+        return value;
+    }
+
+    private static void putNullable(ObjectNode node, String name, String value) {
+        if (value == null || value.isBlank()) node.putNull(name);
+        else node.put(name, value);
+    }
+
     private ObjectNode baselineVerification(String startSha) {
         ObjectNode result = JSON.createObjectNode();
         String enablement = "e7b651f";
@@ -2084,18 +2554,383 @@ public class CampaignEvaluator {
         return result;
     }
 
-    private String gitShow(String sha, String path) {
+    private ObjectNode analyzeStartCiAndBuild(
+            Path repo, String sha, String projectRoot) {
+        ObjectNode result = JSON.createObjectNode();
+        result.put("sha", sha);
+        result.put("projectRoot", projectRoot);
+        ArrayNode workflows = result.putArray("workflows");
+        Map<String, Integer> gateCounts = new LinkedHashMap<>();
+        for (String gate : List.of("formatting", "static_analysis", "compiler",
+                "unit_tests", "container_tests", "ci_other")) {
+            gateCounts.put(gate, 0);
+        }
+        for (String path : gitPaths(repo, sha,
+                value -> value.startsWith(".github/workflows/")
+                        && (value.endsWith(".yml") || value.endsWith(".yaml")))) {
+            String text = gitShow(repo, sha, path);
+            ObjectNode workflow = workflows.addObject();
+            workflow.put("path", path);
+            ArrayNode jobs = workflow.putArray("jobs");
+            String job = null;
+            String step = null;
+            int jobIndent = -1;
+            for (String line : text.split("\\R")) {
+                int indent = line.length() - line.stripLeading().length();
+                Matcher jobLine = Pattern.compile("^\\s{2}([A-Za-z0-9_-]+):\\s*$").matcher(line);
+                if (jobLine.find() && !"jobs".equals(jobLine.group(1))) {
+                    job = jobLine.group(1);
+                    jobIndent = indent;
+                    ObjectNode node = jobs.addObject();
+                    node.put("id", job);
+                    node.putArray("steps");
+                    continue;
+                }
+                Matcher jobName = Pattern.compile("^\\s+name:\\s*['\"]?(.+?)['\"]?\\s*$")
+                        .matcher(line);
+                if (job != null && indent == jobIndent + 2 && jobName.find()) {
+                    ((ObjectNode) jobs.get(jobs.size() - 1)).put(
+                            "name", jobName.group(1).replaceAll("['\"]$", "").trim());
+                    continue;
+                }
+                Matcher name = Pattern.compile(
+                        "^\\s*-\\s*name:\\s*['\"]?(.+?)['\"]?\\s*$").matcher(line);
+                if (job != null && name.find()) {
+                    step = name.group(1).replaceAll("['\"]$", "").trim();
+                    ObjectNode jobNode = (ObjectNode) jobs.get(jobs.size() - 1);
+                    ObjectNode stepNode = ((ArrayNode) jobNode.path("steps")).addObject();
+                    stepNode.put("name", step);
+                    String gate = ciGate(step);
+                    stepNode.put("gate", gate);
+                    gateCounts.merge(gate, 1, Integer::sum);
+                } else if (job != null && indent > jobIndent
+                        && (line.stripLeading().startsWith("run:")
+                        || line.stripLeading().startsWith("- run:")
+                        || line.stripLeading().startsWith("- uses:"))) {
+                    String stripped = line.stripLeading().replaceFirst("^-\\s*", "");
+                    boolean uses = stripped.startsWith("uses:");
+                    String command = stripped.substring(stripped.indexOf(':') + 1).trim();
+                    ObjectNode jobNode = (ObjectNode) jobs.get(jobs.size() - 1);
+                    ObjectNode stepNode;
+                    ArrayNode steps = (ArrayNode) jobNode.path("steps");
+                    if (steps.isEmpty() || step == null) {
+                        stepNode = steps.addObject();
+                        stepNode.put("name", uses ? "uses" : "run");
+                    } else {
+                        stepNode = (ObjectNode) steps.get(steps.size() - 1);
+                    }
+                    stepNode.put(uses ? "uses" : "command", command);
+                    String gate = ciGate((step == null ? "" : step) + " " + command);
+                    stepNode.put("gate", gate);
+                    gateCounts.merge(gate, 1, Integer::sum);
+                    step = null;
+                }
+            }
+        }
+        String pomPath = joinRoot(projectRoot, "pom.xml");
+        String pom = gitShow(repo, sha, pomPath);
+        result.put("buildFile", pomPath);
+        ArrayNode bound = result.putArray("validateVerifyPlugins");
+        Matcher plugin = Pattern.compile("<plugin>(.*?)</plugin>", Pattern.DOTALL).matcher(pom);
+        while (plugin.find()) {
+            String body = plugin.group(1);
+            Matcher phase = Pattern.compile("<phase>\\s*(validate|verify)\\s*</phase>",
+                    Pattern.CASE_INSENSITIVE).matcher(body);
+            if (!phase.find()) continue;
+            String artifact = xmlValue(body, "artifactId");
+            ObjectNode node = bound.addObject();
+            node.put("artifactId", artifact);
+            node.put("phase", phase.group(1).toLowerCase(Locale.ROOT));
+            String gate = ciGate(artifact + " " + body);
+            node.put("gate", gate);
+            gateCounts.merge(gate, 1, Integer::sum);
+        }
+        ObjectNode taxonomy = result.putObject("taxonomy");
+        gateCounts.forEach((gate, count) -> {
+            ObjectNode node = taxonomy.putObject(gate);
+            node.put("status", count == 0 ? "not_present" : "present");
+            node.put("entryCount", count);
+        });
+        return result;
+    }
+
+    private static String xmlValue(String xml, String name) {
+        Matcher matcher = Pattern.compile("<" + name + ">\\s*([^<]+)\\s*</" + name + ">")
+                .matcher(xml);
+        return matcher.find() ? matcher.group(1).trim() : "";
+    }
+
+    private static String ciGate(String value) {
+        String lower = value.toLowerCase(Locale.ROOT);
+        if (lower.contains("format") || lower.contains("spotless")) return "formatting";
+        if (lower.contains("pmd") || lower.contains("checkstyle")
+                || lower.contains("spotbugs") || lower.contains("source-gate")
+                || lower.contains("source gate") || lower.contains("enforcer")) {
+            return "static_analysis";
+        }
+        if (lower.contains("compile") || lower.contains("compiler")) return "compiler";
+        if (lower.contains("failsafe") || lower.contains("arquillian")
+                || lower.contains("container")) return "container_tests";
+        if (lower.contains("surefire") || lower.contains("unit test")
+                || lower.matches(".*\\bmvn\\b.*\\btest\\b.*")) return "unit_tests";
+        return "ci_other";
+    }
+
+    private ObjectNode compareStarts(RepoRevision control, RepoRevision treatment)
+            throws IOException {
+        ObjectNode result = JSON.createObjectNode();
+        result.put("controlRepo", control.repo().toString());
+        result.put("controlSha", control.sha());
+        result.put("treatmentRepo", treatment.repo().toString());
+        result.put("treatmentSha", treatment.sha());
+        Path base = config.outputDir.resolve(".worktrees");
+        Files.createDirectories(base);
+        Path controlTree = addWorktree(control, base.resolve("control-start"));
+        Path treatmentTree = addWorktree(treatment, base.resolve("treatment-start"));
+        try {
+            CommandResult names = command(List.of(
+                    "git", "diff", "--no-index", "--find-renames=100%",
+                    "--name-status", controlTree.toString(), treatmentTree.toString()),
+                    null, Map.of());
+            Map<String, List<String>> classified = new LinkedHashMap<>();
+            for (String category : List.of("guardrail_infrastructure", "relocation_only",
+                    "formatting_only", "substantive_production", "campaign_inputs", "other")) {
+                classified.put(category, new ArrayList<>());
+            }
+            ArrayNode paths = result.putArray("paths");
+            for (String line : names.output.split("\\R")) {
+                if (line.isBlank()) continue;
+                String[] fields = line.split("\\t");
+                String status = fields[0];
+                String oldPath;
+                String newPath;
+                if (status.startsWith("R") || status.startsWith("C")) {
+                    oldPath = relativeDiffPath(fields[1], controlTree);
+                    newPath = relativeDiffPath(fields[2], treatmentTree);
+                } else if (status.startsWith("A")) {
+                    oldPath = null;
+                    newPath = relativeDiffPath(fields[1], treatmentTree);
+                } else if (status.startsWith("D")) {
+                    oldPath = relativeDiffPath(fields[1], controlTree);
+                    newPath = null;
+                } else {
+                    oldPath = relativeDiffPath(fields[1], controlTree);
+                    newPath = oldPath;
+                }
+                if (".git".equals(oldPath) || ".git".equals(newPath)) continue;
+                String display = oldPath == null || Objects.equals(oldPath, newPath)
+                        ? Objects.toString(newPath, oldPath)
+                        : oldPath + " -> " + newPath;
+                String category;
+                if (status.startsWith("R100")) {
+                    category = "relocation_only";
+                } else if (isCampaignInput(newPath) || isCampaignInput(oldPath)) {
+                    category = "campaign_inputs";
+                } else if (isGuardrail(newPath) || isGuardrail(oldPath)) {
+                    category = "guardrail_infrastructure";
+                } else if (oldPath != null && newPath != null
+                        && Files.isRegularFile(controlTree.resolve(oldPath))
+                        && Files.isRegularFile(treatmentTree.resolve(newPath))
+                        && command(List.of("git", "diff", "--no-index", "-w", "--exit-code",
+                                controlTree.resolve(oldPath).toString(),
+                                treatmentTree.resolve(newPath).toString()),
+                                null, Map.of()).exitCode == 0) {
+                    category = "formatting_only";
+                } else if ((newPath != null && (newPath.startsWith("src/main/")
+                        || newPath.contains("/src/main/")))
+                        || (oldPath != null && (oldPath.startsWith("src/main/")
+                        || oldPath.contains("/src/main/")))) {
+                    category = "substantive_production";
+                } else {
+                    category = "other";
+                }
+                classified.get(category).add(display);
+                ObjectNode node = paths.addObject();
+                node.put("status", status);
+                if (oldPath == null) node.putNull("oldPath"); else node.put("oldPath", oldPath);
+                if (newPath == null) node.putNull("newPath"); else node.put("newPath", newPath);
+                node.put("classification", category);
+            }
+            ObjectNode summary = result.putObject("classificationSummary");
+            classified.forEach((category, values) -> {
+                ObjectNode node = summary.putObject(category);
+                node.put("count", values.size());
+                ArrayNode list = node.putArray("paths");
+                values.forEach(list::add);
+            });
+            ArrayNode inputs = result.putArray("campaignInputDiffs");
+            for (JsonNode path : paths) {
+                if (!"campaign_inputs".equals(path.path("classification").asText())) continue;
+                String oldPath = path.path("oldPath").asText(null);
+                String newPath = path.path("newPath").asText(null);
+                ObjectNode input = inputs.addObject();
+                input.put("path", oldPath == null || Objects.equals(oldPath, newPath)
+                        ? Objects.toString(newPath, oldPath)
+                        : newPath == null ? oldPath : oldPath + " -> " + newPath);
+                Path oldFile = oldPath == null ? null : controlTree.resolve(oldPath);
+                Path newFile = newPath == null ? null : treatmentTree.resolve(newPath);
+                input.put("controlLines", lineCount(oldFile));
+                input.put("treatmentLines", lineCount(newFile));
+                CommandResult patch = oldFile == null
+                        ? new CommandResult(1, "Added only: " + newPath)
+                        : newFile == null
+                        ? new CommandResult(1, "Removed only: " + oldPath)
+                        : command(List.of("git", "diff", "--no-index", "--",
+                                oldFile.toString(), newFile.toString()), null, Map.of());
+                input.put("lineDiff", excerpt(patch.output, 20000));
+            }
+            result.put("availability", "measured");
+            return result;
+        } finally {
+            removeWorktree(control.repo(), controlTree);
+            removeWorktree(treatment.repo(), treatmentTree);
+        }
+    }
+
+    private static Path addWorktree(RepoRevision revision, Path directory)
+            throws IOException {
         CommandResult result = command(List.of(
-                "git", "-C", config.repo.toString(), "show", sha + ":" + path),
+                "git", "-C", revision.repo().toString(), "worktree", "add",
+                "--detach", directory.toString(), revision.sha()), null, Map.of());
+        if (result.exitCode != 0) {
+            throw new IOException("Could not create comparison worktree: " + result.output);
+        }
+        return directory;
+    }
+
+    private static void removeWorktree(Path repo, Path worktree) {
+        if (worktree != null) {
+            command(List.of("git", "-C", repo.toString(), "worktree", "remove",
+                    "--force", worktree.toString()), null, Map.of());
+        }
+    }
+
+    private static String relativeDiffPath(String value, Path root) {
+        String normalized = value.replace('\\', '/');
+        String prefix = root.toString().replace('\\', '/') + "/";
+        int index = normalized.indexOf(prefix);
+        if (index >= 0) {
+            return normalized.substring(index + prefix.length());
+        }
+        String marker = root.getFileName().toString() + "/";
+        index = normalized.indexOf(marker);
+        if (index >= 0) {
+            return normalized.substring(index + marker.length());
+        }
+        return normalized.replaceFirst("^a/", "").replaceFirst("^b/", "");
+    }
+
+    private static boolean isCampaignInput(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase(Locale.ROOT);
+        return lower.contains("plan") || lower.contains("prompt")
+                || lower.contains("campaign") && (lower.endsWith(".md")
+                || lower.endsWith(".json"));
+    }
+
+    private static boolean isGuardrail(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase(Locale.ROOT);
+        return lower.startsWith(".github/") || lower.contains("shepherd-task")
+                || lower.contains("guardrail") || lower.contains("acceptance");
+    }
+
+    private static long lineCount(Path path) {
+        if (path == null || !Files.isRegularFile(path)) return 0;
+        try (var lines = Files.lines(path, StandardCharsets.UTF_8)) {
+            return lines.count();
+        } catch (IOException ignored) {
+            return 0;
+        }
+    }
+
+    private String gitShow(String sha, String path) {
+        return gitShow(config.repo, sha, path);
+    }
+
+    private static String gitShow(Path repo, String sha, String path) {
+        CommandResult result = command(List.of(
+                "git", "-C", repo.toString(), "show", sha + ":" + path),
                 null, Map.of());
         return result.exitCode == 0 ? result.output : "";
     }
 
-    private ObjectNode cpdComparison(String startSha, String finalSha) {
+    private static String joinRoot(String root, String path) {
+        return root == null || root.isBlank() || ".".equals(root)
+                ? path : root + "/" + path;
+    }
+
+    private String inferMavenProjectRoot(Path repo, String sha) {
+        Set<String> pomPaths = gitPaths(repo, sha, path -> path.endsWith("pom.xml"));
+        if (pomPaths.isEmpty()) return ".";
+        Set<String> workflowPaths = gitPaths(repo, sha,
+                path -> path.startsWith(".github/workflows/")
+                        && (path.endsWith(".yml") || path.endsWith(".yaml")));
+        Map<String, Integer> scores = new HashMap<>();
+        for (String workflowPath : workflowPaths) {
+            String workflow = gitShow(repo, sha, workflowPath);
+            Matcher working = Pattern.compile(
+                    "(?m)^\\s*working-directory:\\s*['\"]?([^'\"#\\s]+)")
+                    .matcher(workflow);
+            while (working.find()) {
+                String candidate = working.group(1).replaceFirst("^\\./", "");
+                if (pomPaths.contains(joinRoot(candidate, "pom.xml"))) {
+                    scores.merge(candidate, 4, Integer::sum);
+                }
+            }
+            Matcher file = Pattern.compile(
+                    "(?:mvn|\\./mvnw)\\s+(?:[^\\r\\n]*?\\s)?(?:-f|--file)\\s+([^\\s'\"\\\\]+)")
+                    .matcher(workflow);
+            while (file.find()) {
+                String pom = file.group(1).replaceFirst("^\\./", "");
+                if (pomPaths.contains(pom)) {
+                    String parent = Paths.get(pom).getParent() == null
+                            ? "." : Paths.get(pom).getParent().toString();
+                    scores.merge(parent, 5, Integer::sum);
+                }
+            }
+        }
+        if (!scores.isEmpty()) {
+            return scores.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed()
+                            .thenComparingInt(entry -> pathDepth(entry.getKey())))
+                    .map(Map.Entry::getKey).findFirst().orElse(".");
+        }
+        return pomPaths.stream()
+                .filter(path -> gitShow(repo, sha, path).contains("<build"))
+                .min(Comparator.comparingInt(CampaignEvaluator::pathDepth))
+                .map(path -> {
+                    Path parent = Paths.get(path).getParent();
+                    return parent == null ? "." : parent.toString();
+                })
+                .orElseGet(() -> pomPaths.stream()
+                        .min(Comparator.comparingInt(CampaignEvaluator::pathDepth))
+                        .map(path -> {
+                            Path parent = Paths.get(path).getParent();
+                            return parent == null ? "." : parent.toString();
+                        }).orElse("."));
+    }
+
+    private static int pathDepth(String path) {
+        return ".".equals(path) || path.isBlank() ? 0 : Paths.get(path).getNameCount();
+    }
+
+    private static Set<String> gitPaths(
+            Path repo, String sha, Predicate<String> predicate) {
+        CommandResult result = command(List.of(
+                "git", "-C", repo.toString(), "ls-tree", "-r", "--name-only", sha),
+                null, Map.of());
+        return Arrays.stream(result.output.split("\\R"))
+                .filter(predicate)
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    private ObjectNode cpdComparison(
+            String startSha, String finalSha, String startRoot, String finalRoot) {
         ObjectNode result = JSON.createObjectNode();
         result.put("minimumTokens", CPD_MINIMUM_TOKENS);
-        CpdResult baseline = runCpd(startSha);
-        CpdResult current = runCpd(finalSha);
+        CpdResult baseline = runCpd(startSha, startRoot);
+        CpdResult current = runCpd(finalSha, finalRoot);
         result.set("baseline", baseline.toJson());
         result.set("final", current.toJson());
         if (baseline.available && current.available) {
@@ -2112,7 +2947,7 @@ public class CampaignEvaluator {
         return result;
     }
 
-    private CpdResult runCpd(String sha) {
+    private CpdResult runCpd(String sha, String projectRoot) {
         Path worktree = null;
         try {
             worktree = createWorktree("cpd", sha);
@@ -2122,8 +2957,8 @@ public class CampaignEvaluator {
                     "-Dpmd.minimumTokens=" + CPD_MINIMUM_TOKENS,
                     "-Dpmd.includeTests=true",
                     "org.apache.maven.plugins:maven-pmd-plugin:3.25.0:cpd"),
-                    worktree, environment);
-            Path report = worktree.resolve("target/cpd.xml");
+                    projectDirectory(worktree, projectRoot), environment);
+            Path report = projectDirectory(worktree, projectRoot).resolve("target/cpd.xml");
             if (run.exitCode != 0 || !Files.isRegularFile(report)) {
                 return CpdResult.unavailable(excerpt(run.output, 1200));
             }
@@ -2171,9 +3006,10 @@ public class CampaignEvaluator {
         }
     }
 
-    private ObjectNode buildWarningComparison(String startSha, String finalSha) {
-        BuildWarnings baseline = compileWarnings(startSha);
-        BuildWarnings current = compileWarnings(finalSha);
+    private ObjectNode buildWarningComparison(
+            String startSha, String finalSha, String startRoot, String finalRoot) {
+        BuildWarnings baseline = compileWarnings(startSha, startRoot);
+        BuildWarnings current = compileWarnings(finalSha, finalRoot);
         ObjectNode result = JSON.createObjectNode();
         result.put("jdk", "17");
         result.put("compilerLint", "deprecation,removal");
@@ -2192,7 +3028,7 @@ public class CampaignEvaluator {
         return result;
     }
 
-    private BuildWarnings compileWarnings(String sha) {
+    private BuildWarnings compileWarnings(String sha, String projectRoot) {
         Path worktree = null;
         try {
             if (!Files.isDirectory(Paths.get(
@@ -2205,7 +3041,8 @@ public class CampaignEvaluator {
                     "mvn", "-DskipTests",
                     "-Dmaven.compiler.showWarnings=true",
                     "-Dmaven.compiler.compilerArgs=-Xlint:deprecation,removal",
-                    "test-compile"), worktree, java17Environment());
+                    "test-compile"), projectDirectory(worktree, projectRoot),
+                    java17Environment());
             String worktreePath = worktree.toString();
             Set<String> warnings = Arrays.stream(result.output.split("\\R"))
                     .map(String::trim)
@@ -2224,10 +3061,16 @@ public class CampaignEvaluator {
         }
     }
 
+    private static Path projectDirectory(Path worktree, String projectRoot) {
+        return projectRoot == null || projectRoot.isBlank() || ".".equals(projectRoot)
+                ? worktree : worktree.resolve(projectRoot);
+    }
+
     private Path createWorktree(String purpose, String sha) throws IOException {
-        Path directory = Files.createTempDirectory(
-                "shepherd-task-evaluator-" + purpose + "-");
-        Files.delete(directory);
+        Path base = config.outputDir.resolve(".worktrees");
+        Files.createDirectories(base);
+        Path directory = base.resolve(purpose + "-" + sha.substring(0, Math.min(12, sha.length()))
+                + "-" + System.nanoTime());
         CommandResult result = command(List.of(
                 "git", "-C", config.repo.toString(), "worktree", "add",
                 "--detach", directory.toString(), sha), null, Map.of());
@@ -2278,6 +3121,8 @@ public class CampaignEvaluator {
         value.put("arm", config.arm);
         copy(manifest, value, "campaignId");
         value.put("campaignDirectory", config.campaignDir.toString());
+        ArrayNode directories = value.putArray("campaignDirectories");
+        config.campaignDirs.forEach(path -> directories.add(path.toString()));
         copy(manifest, value, "repository");
         copy(manifest, value, "baseBranch");
         copy(manifest, value, "lessonPropagation");
@@ -2297,10 +3142,33 @@ public class CampaignEvaluator {
         value.put("primarySessionDurationSource", "markdown_header_truncated_seconds");
         value.put("transcriptTimestampConversionMethod",
                 "Local header timestamps are converted with the UTC offset that best aligns the header start with the first JSONL timestamp.");
-        value.put("orchestrationOverheadSeconds", campaignSeconds - sessionSeconds);
+        long gaps = combinedGapSeconds();
+        value.put("interDirectoryGapSeconds", gaps);
+        value.put("orchestrationOverheadSeconds",
+                campaignSeconds - sessionSeconds - gaps);
         value.put("evaluatorVersion", evaluatorVersion);
         value.put("evaluatorGitCommit", evaluatorCommit);
         return value;
+    }
+
+    private long combinedGapSeconds() {
+        long gaps = 0;
+        Instant priorEnd = null;
+        for (Path directory : config.campaignDirs) {
+            try {
+                JsonNode manifest = JSON.readTree(directory
+                        .resolve("shepherd-task-25-given-list-run.json").toFile());
+                Instant start = parseInstant(manifest.path("startedAt").asText());
+                Instant end = parseInstant(manifest.path("completedAt").asText());
+                if (priorEnd != null && start != null) {
+                    gaps += Duration.between(priorEnd, start).getSeconds();
+                }
+                if (end != null) priorEnd = end;
+            } catch (IOException ignored) {
+                // Manifest readability was validated before analysis.
+            }
+        }
+        return gaps;
     }
 
     private static long durationBetween(String start, String end) {
@@ -2380,6 +3248,8 @@ public class CampaignEvaluator {
             List<SessionResult> taskSessions = sessions.stream()
                     .filter(session -> session.issue == task.issue).toList();
             node.put("sessionCount", taskSessions.size());
+            node.put("attempts", taskSessions.stream()
+                    .map(session -> session.attempt).distinct().count());
             node.put("recordedSessionTimeSeconds",
                     taskSessions.stream().mapToLong(value -> value.durationSeconds).sum());
             node.put("jsonlSessionTimeMs",
@@ -2621,7 +3491,40 @@ public class CampaignEvaluator {
                 sessions.stream().map(session -> session.models).distinct().count() == 1);
         result.put("allSessionsSameReasoningLevel",
                 sessions.stream().map(session -> session.reasoningLevels).distinct().count() == 1);
+        ArrayNode drift = result.putArray("drift");
+        addInvariantDrift(drift, "copilotCliVersions", sessions.stream()
+                .collect(Collectors.groupingBy(session -> session.attempt,
+                        TreeMap::new,
+                        Collectors.flatMapping(session -> session.copilotCliVersions.stream(),
+                                Collectors.toCollection(TreeSet::new)))));
+        Map<Integer, Set<String>> stage30Lengths = new TreeMap<>();
+        for (SessionResult session : sessions) {
+            Long length = session.skillContentLengths.get(
+                    "shepherd-task-30-from-assignment-to-ready");
+            if (length != null) {
+                stage30Lengths.computeIfAbsent(session.attempt,
+                        ignored -> new TreeSet<>()).add(Long.toString(length));
+            }
+        }
+        addInvariantDrift(drift, "stage30SkillContentLength", stage30Lengths);
+        result.put("driftDetected", drift.size() > 0);
+        result.put("referenceInvariantObservation",
+                "Control CLI 1.0.89 / stage-30 length 25804; treatment CLI 1.0.91 / stage-30 length 27427.");
         return result;
+    }
+
+    private static void addInvariantDrift(
+            ArrayNode rows, String invariant, Map<Integer, Set<String>> byAttempt) {
+        Set<Set<String>> distinct = new HashSet<>(byAttempt.values());
+        if (distinct.size() <= 1) return;
+        ObjectNode row = rows.addObject();
+        row.put("invariant", invariant);
+        row.put("warning", true);
+        ObjectNode values = row.putObject("valuesByAttempt");
+        byAttempt.forEach((attempt, observed) -> {
+            ArrayNode list = values.putArray(Integer.toString(attempt));
+            observed.forEach(list::add);
+        });
     }
 
     private ObjectNode aggregateCiAnalysis(
@@ -2634,14 +3537,18 @@ public class CampaignEvaluator {
         ArrayNode allObserved = result.putArray("observedCheckNames");
         observed.forEach(allObserved::add);
         ArrayNode substantive = result.putArray("substantiveCheckNames");
-        observed.stream()
-                .filter(name -> name.startsWith("Shepherd task "))
-                .forEach(substantive::add);
+        observed.forEach(substantive::add);
+        ArrayNode classifiedChecks = result.putArray("classifiedChecks");
+        observed.forEach(name -> {
+            ObjectNode check = classifiedChecks.addObject();
+            check.put("name", name);
+            check.put("gate", ciGate(name));
+            check.put("substantive", true);
+        });
         ArrayNode excluded = result.putArray("excludedOrchestrationChecks");
-        if (sessions.stream().mapToInt(
-                session -> session.remoteAgentCheckObservations).sum() > 0) {
-            excluded.add("Running Copilot cloud agent");
-        }
+        excluded.add("Running Copilot cloud agent");
+        excluded.add("Addressing comment on PR #N");
+        excluded.add("copilot");
         result.put("remoteAgentCheckObservations", sessions.stream()
                 .mapToInt(session -> session.remoteAgentCheckObservations).sum());
         result.put("testsSkippedMessages", sessions.stream()
@@ -2650,11 +3557,48 @@ public class CampaignEvaluator {
                 .mapToInt(session -> session.ciTestsSkippedMessages).sum();
         result.put("ciTestsSkippedMessages", ciSkipped);
         ObjectNode execution = result.putObject("testExecution");
-        if (ciSkipped > 0) {
+        boolean ciLogsCaptured = sessions.stream().anyMatch(session -> session.ciLogCaptured);
+        List<CiTestSummary> summaries = sessions.stream()
+                .flatMap(session -> session.ciTestSummaries.stream()).toList();
+        result.put("ciLogsCaptured", ciLogsCaptured);
+        ArrayNode perRun = result.putArray("testSummariesByRunAndTask");
+        for (SessionResult session : sessions) {
+            for (CiTestSummary summary : session.ciTestSummaries) {
+                ObjectNode node = perRun.addObject();
+                node.put("taskIssue", session.issue);
+                node.put("attempt", session.attempt);
+                node.put("ciRun", summary.run());
+                node.put("provider", summary.provider());
+                node.put("testsRun", summary.testsRun());
+                node.put("failures", summary.failures());
+                node.put("errors", summary.errors());
+                node.put("skipped", summary.skipped());
+            }
+        }
+        if (!summaries.isEmpty()) {
+            execution.put("availability", "measured");
+            execution.put("testsExecuted", summaries.stream()
+                    .mapToInt(CiTestSummary::testsRun).sum() > 0);
+            execution.put("testsRun", summaries.stream()
+                    .mapToInt(CiTestSummary::testsRun).sum());
+            execution.put("failures", summaries.stream()
+                    .mapToInt(CiTestSummary::failures).sum());
+            execution.put("errors", summaries.stream()
+                    .mapToInt(CiTestSummary::errors).sum());
+            execution.put("skipped", summaries.stream()
+                    .mapToInt(CiTestSummary::skipped).sum());
+            execution.put("source", "Surefire/Failsafe summaries parsed from captured CI logs.");
+        } else if (ciSkipped > 0) {
             execution.put("availability", "measured");
             execution.put("testsExecuted", false);
             execution.put("testsRun", 0);
             execution.put("source", "CI transcript log contains 'Tests are skipped.'");
+        } else if (ciLogsCaptured) {
+            execution.put("availability", "measured");
+            execution.putNull("testsExecuted");
+            execution.putNull("testsRun");
+            execution.put("source",
+                    "CI logs were captured but contained no Surefire/Failsafe summary.");
         } else {
             execution.put("availability", "unavailable");
             execution.putNull("testsExecuted");
@@ -2683,27 +3627,45 @@ public class CampaignEvaluator {
 
     private ObjectNode readSkillContentVerification() {
         ObjectNode result = JSON.createObjectNode();
-        Path evidence = config.campaignDir.resolve(
-                "shepherd-task-skill-content-hashes.json");
-        if (!Files.isRegularFile(evidence)) {
+        ObjectNode perDirectory = result.putObject("perDirectory");
+        int verified = 0;
+        for (Path directory : config.campaignDirs) {
+            Path evidence = directory.resolve(
+                    "shepherd-task-skill-content-hashes.json");
+            ObjectNode entry = perDirectory.putObject(directory.toString());
+            if (!Files.isRegularFile(evidence)) {
+                entry.put("status", "unverified");
+                entry.put("availability", "unavailable");
+                continue;
+            }
+            try {
+                JsonNode artifact = JSON.readTree(evidence.toFile());
+                entry.put("status", "verified");
+                entry.put("availability", "measured");
+                entry.put("artifact", evidence.getFileName().toString());
+                entry.set("data", artifact);
+                verified++;
+            } catch (IOException error) {
+                entry.put("status", "invalid");
+                entry.put("availability", "unavailable");
+                entry.put("reason", error.getMessage());
+            }
+        }
+        if (verified == 0) {
             result.put("status", "unverified");
             result.put("availability", "unavailable");
-            result.put("expectedArtifact", evidence.getFileName().toString());
+            result.put("expectedArtifact",
+                    "shepherd-task-skill-content-hashes.json");
             result.put("fallback",
                     "Telemetry provides skill name hashes and content lengths only.");
             return result;
         }
-        try {
-            JsonNode artifact = JSON.readTree(evidence.toFile());
+        if (verified == config.campaignDirs.size()) {
             result.put("status", "verified");
             result.put("availability", "measured");
-            result.put("artifact", evidence.getFileName().toString());
-            result.set("data", artifact);
-        } catch (IOException error) {
-            result.put("status", "invalid");
-            result.put("availability", "unavailable");
-            result.put("artifact", evidence.getFileName().toString());
-            result.put("reason", error.getMessage());
+        } else {
+            result.put("status", "partially_verified");
+            result.put("availability", "measured");
         }
         return result;
     }
@@ -2792,6 +3754,64 @@ public class CampaignEvaluator {
         return result;
     }
 
+    private ArrayNode acceptanceChecks(ObjectNode root) {
+        ArrayNode checks = JSON.createArrayNode();
+        JsonNode repository = root.path("repositoryAnalysis");
+        addAcceptance(checks, "maven_project_root_recorded",
+                repository.path("startProjectRoot").isTextual()
+                        && repository.path("finalProjectRoot").isTextual(),
+                repository.path("projectRootsBySha"));
+        addAcceptance(checks, "cross_repo_start_equivalence",
+                config.controlStart == null
+                        || "measured".equals(repository.path("startEquivalence")
+                        .path("availability").asText()),
+                repository.path("startEquivalence").path("classificationSummary"));
+        addAcceptance(checks, "ci_and_build_gates_classified",
+                repository.path("startCiAndBuildGates").path("taxonomy")
+                        .has("formatting")
+                        && repository.path("startCiAndBuildGates").path("taxonomy")
+                        .has("static_analysis"),
+                repository.path("startCiAndBuildGates").path("taxonomy"));
+        boolean allProductClassified = events.stream()
+                .filter(event -> "product_defect".equals(event.path("classification")
+                        .path("category").asText()))
+                .allMatch(event -> event.path("detectionGate").isTextual()
+                        && event.path("defectClass").isTextual());
+        addAcceptance(checks, "product_defect_gate_and_class_non_null",
+                allProductClassified, allProductClassified);
+        List<ObjectNode> guardrailUnclassified = unclassified.stream()
+                .filter(event -> {
+                    String evidence = event.path("evidence").path("excerpt")
+                            .asText("").toLowerCase(Locale.ROOT);
+                    return evidence.contains("spotless")
+                            || evidence.contains("formatting")
+                            || evidence.contains("source-gates")
+                            || evidence.contains("source gates");
+                }).toList();
+        addAcceptance(checks, "guardrail_failures_not_unclassified",
+                guardrailUnclassified.isEmpty(), array(guardrailUnclassified));
+        addAcceptance(checks, "ci_test_log_availability_semantics",
+                !"unavailable".equals(root.path("ciAnalysis").path("testExecution")
+                        .path("availability").asText())
+                        || !root.path("ciAnalysis").path("ciLogsCaptured").asBoolean(),
+                root.path("ciAnalysis").path("testExecution"));
+        addAcceptance(checks, "combined_attempts_preserved",
+                config.mode != Mode.COMBINE
+                        || root.path("campaign").path("campaignDirectories").size()
+                        == config.campaignDirs.size(),
+                root.path("campaign").path("campaignDirectories"));
+        return checks;
+    }
+
+    private static void addAcceptance(
+            ArrayNode checks, String name, boolean pass, Object observed) {
+        ObjectNode check = checks.addObject();
+        check.put("name", name);
+        check.put("status", pass ? "pass" : "fail");
+        check.set("observed", observed instanceof JsonNode node
+                ? node.deepCopy() : JSON.valueToTree(observed));
+    }
+
     private static void addReconciliation(
             ArrayNode rows, String metric, Object expected, Object actual, String method) {
         ObjectNode row = rows.addObject();
@@ -2808,7 +3828,9 @@ public class CampaignEvaluator {
         List<String> columns = List.of(
                 "schema_version", "evaluator_version", "evaluator_git_commit", "arm",
                 "campaign_id", "row_type", "task_issue", "pr_number",
+                "attempts",
                 "first_detection_gate", "compiler_defects", "static_analysis_defects",
+                "formatting_defects",
                 "unit_tests_defects", "arquillian_container_tests_defects",
                 "ci_defects", "ccra_review_defects", "stage_30_gate_defects",
                 "functional_acceptance_defects",
@@ -2818,6 +3840,8 @@ public class CampaignEvaluator {
                 "nonzero_tool_exits",
                 "review_rounds", "ccra_actionable_comments", "stage30_change_requests",
                 "product_defects", "flaky_test_failures", "leftover_state_failures",
+                "behavioral_defects", "completeness_defects", "style_defects",
+                "static_analysis_finding_defects",
                 "aiu", "premium_requests", "input_tokens", "cache_read_tokens",
                 "cache_write_tokens", "uncached_input_tokens", "output_tokens", "reasoning_tokens",
                 "product_code_events", "shepherd_harness_events",
@@ -2838,6 +3862,8 @@ public class CampaignEvaluator {
             Map<String, Object> row = baseCsvRow(manifest, "task");
             row.put("task_issue", task.issue);
             row.put("pr_number", task.prNumber);
+            row.put("attempts", selected.stream()
+                    .map(session -> session.attempt).distinct().count());
             fillSessionCsv(row, selected);
             if (task.gitTask != null && task.gitTask.diff != null) {
                 row.put("files_changed", task.gitTask.diff.files);
@@ -2851,6 +3877,7 @@ public class CampaignEvaluator {
         }
         Map<String, Object> campaign = baseCsvRow(manifest, "campaign");
         fillSessionCsv(campaign, sessions);
+        campaign.put("attempts", config.campaignDirs.size());
         JsonNode campaignDiff = root.path("repositoryAnalysis").path("campaignDiff");
         if (!campaignDiff.isMissingNode()) {
             campaign.put("files_changed", nullableText(campaignDiff, "files"));
@@ -2905,10 +3932,12 @@ public class CampaignEvaluator {
                 .filter(event -> issues.contains(event.path("taskIssue").asInt()))
                 .filter(event -> "stage_30_change_request".equals(
                         event.path("eventKind").asText())).count());
-        row.put("product_defects", events.stream()
-                .filter(event -> issues.contains(event.path("taskIssue").asInt()))
-                .filter(event -> "product_defect".equals(
-                        event.path("classification").path("category").asText())).count());
+        row.put("product_defects", distinctDefectCount(issues, null));
+        for (String defectClass : List.of(
+                "behavioral", "completeness", "style", "static_analysis_finding")) {
+            row.put(defectClass + "_defects",
+                    distinctDefectCount(issues, defectClass));
+        }
         row.put("flaky_test_failures",
                 sessions.stream().mapToInt(value -> value.flakyTestFailures).sum());
         row.put("leftover_state_failures",
@@ -2955,6 +3984,17 @@ public class CampaignEvaluator {
         }
     }
 
+    private long distinctDefectCount(Set<Integer> issues, String defectClass) {
+        return events.stream()
+                .filter(event -> issues.contains(event.path("taskIssue").asInt()))
+                .filter(event -> "product_defect".equals(
+                        event.path("classification").path("category").asText()))
+                .filter(event -> defectClass == null
+                        || defectClass.equals(event.path("defectClass").asText()))
+                .map(CampaignEvaluator::defectFingerprint)
+                .distinct().count();
+    }
+
     private void fillDefectCsvColumns(Map<String, Object> row, Set<Integer> issues) {
         List<ObjectNode> product = events.stream()
                 .filter(event -> issues.contains(event.path("taskIssue").asInt()))
@@ -2964,11 +4004,13 @@ public class CampaignEvaluator {
                 .toList();
         row.put("first_detection_gate", product.isEmpty() ? ""
                 : product.get(0).path("detectionGate").asText());
-        for (String gate : List.of("compiler", "static_analysis", "unit_tests",
+        for (String gate : List.of("compiler", "formatting", "static_analysis", "unit_tests",
                 "arquillian_container_tests", "ci", "ccra_review",
                 "stage_30_gate", "functional_acceptance")) {
             row.put(gate + "_defects", product.stream()
                     .filter(event -> gate.equals(event.path("detectionGate").asText()))
+                    .map(CampaignEvaluator::defectFingerprint)
+                    .distinct()
                     .count());
         }
     }
@@ -2978,9 +4020,12 @@ public class CampaignEvaluator {
         List<String> columns = List.of(
                 "schema_version", "evaluator_version", "evaluator_git_commit", "arm",
                 "campaign_id", "defect_id", "task_issue", "pr_number",
-                "category_subtype", "detection_gate", "shepherd_stage",
+                "defect_class", "category_subtype", "item_count",
+                "detection_gate", "where", "shepherd_stage",
                 "detected_at", "detected_head_sha", "fix_commit", "fixed_at",
-                "time_to_fix_seconds", "occurrence_count", "evidence_ids");
+                "detected_timestamp_source", "fix_timestamp_source",
+                "time_to_fix_seconds", "time_anomaly", "resolution_status",
+                "occurrence_count", "evidence_ids");
         StringBuilder output = new StringBuilder();
         output.append(columns.stream().map(CampaignEvaluator::csv)
                 .collect(Collectors.joining(","))).append('\n');
@@ -2991,15 +4036,27 @@ public class CampaignEvaluator {
             row.put("pr_number", defect.path("prNumber").isNull() ? ""
                     : defect.path("prNumber").asText());
             row.put("category_subtype", defect.path("categorySubtype").asText());
+            row.put("defect_class", defect.path("defectClass").asText());
+            row.put("item_count", defect.path("itemCount").asInt(1));
             JsonNode first = defect.path("firstDetection");
             row.put("detection_gate", first.path("detectionGate").asText());
+            String firstEventId = first.path("eventId").asText();
+            events.stream().filter(event -> firstEventId.equals(event.path("id").asText()))
+                    .findFirst().ifPresent(event ->
+                            row.put("where", event.path("where").asText()));
             row.put("shepherd_stage", first.path("shepherdStage").asInt());
             row.put("detected_at", first.path("timestamp").asText(""));
             row.put("detected_head_sha", first.path("headSha").asText(""));
+            row.put("detected_timestamp_source",
+                    first.path("timestampSource").asText(""));
             JsonNode resolution = defect.path("resolution");
             row.put("fix_commit", resolution.path("commit").asText(""));
             row.put("fixed_at", resolution.path("fixedAt").asText(""));
+            row.put("fix_timestamp_source",
+                    resolution.path("timestampSource").asText(""));
             row.put("time_to_fix_seconds", resolution.path("timeToFixSeconds").asText(""));
+            row.put("time_anomaly", resolution.path("anomaly").asText(""));
+            row.put("resolution_status", resolution.path("status").asText(""));
             row.put("occurrence_count", defect.path("occurrenceCount").asInt());
             row.put("evidence_ids", String.join(";",
                     toStrings(defect.path("occurrenceEventIds"))));
@@ -3134,6 +4191,58 @@ public class CampaignEvaluator {
                 .append(root.path("runInvariants").path("skillContentVerification")
                         .path("status").asText("unverified"))
                 .append("`; telemetry hashes identify skill names, not content\n");
+        if (root.path("runInvariants").path("driftDetected").asBoolean()) {
+            report.append("\n> [!WARNING]\n> Combined campaign directories contain invariant drift.\n\n")
+                    .append("| Invariant | Values by attempt |\n|---|---|\n");
+            for (JsonNode drift : root.path("runInvariants").path("drift")) {
+                report.append("| ").append(drift.path("invariant").asText())
+                        .append(" | ").append(drift.path("valuesByAttempt").toString())
+                        .append(" |\n");
+            }
+        }
+
+        report.append("\n## Acceptance checks\n\n")
+                .append("| Check | Status | Observed |\n|---|---|---|\n");
+        for (JsonNode check : root.path("acceptanceChecks")) {
+            report.append("| ").append(check.path("name").asText()).append(" | **")
+                    .append(check.path("status").asText()).append("** | `")
+                    .append(excerpt(check.path("observed").toString(), 500)
+                            .replace("|", "\\|"))
+                    .append("` |\n");
+        }
+
+        JsonNode equivalence = root.path("repositoryAnalysis").path("startEquivalence");
+        report.append("\n## Start equivalence and confounds\n\n");
+        if ("measured".equals(equivalence.path("availability").asText())) {
+            report.append("| Classification | Count | Paths |\n|---|---:|---|\n");
+            equivalence.path("classificationSummary").fields().forEachRemaining(entry ->
+                    report.append("| ").append(entry.getKey()).append(" | ")
+                            .append(entry.getValue().path("count").asInt()).append(" | ")
+                            .append(entry.getValue().path("paths").toString()
+                                    .replace("|", "\\|")).append(" |\n"));
+            report.append("\n### Campaign-input line differences\n\n");
+            for (JsonNode input : equivalence.path("campaignInputDiffs")) {
+                report.append("- **").append(input.path("path").asText()).append("**: ")
+                        .append(input.path("controlLines").asLong()).append(" control lines vs ")
+                        .append(input.path("treatmentLines").asLong())
+                        .append(" treatment lines. This is a campaign-input confound.\n")
+                        .append("\n```diff\n")
+                        .append(input.path("lineDiff").asText())
+                        .append("\n```\n");
+            }
+            for (JsonNode path : equivalence.path("classificationSummary")
+                    .path("relocation_only").path("paths")) {
+                report.append("- Relocation confound: `").append(path.asText()).append("`.\n");
+            }
+        } else {
+            report.append("Cross-repository start comparison was not requested.\n");
+        }
+
+        report.append("\n## Defect interpretation\n\n")
+                .append("See `defects.csv` for one row per deduplicated defect, including ")
+                .append("defect class, item count, local/CI location, timestamp source, ancestry-verified fix, and anomalies.\n\n")
+                .append("Style and static-analysis findings are detectable only where the corresponding gate exists; ")
+                .append("they are excluded from arm-comparison conclusions when either arm reports that gate as `not_present`.\n");
 
         report.append("\n## Post-mortem agent cost\n\n")
                 .append("- AIU: ")
@@ -3176,6 +4285,16 @@ public class CampaignEvaluator {
             report.append("- ").append(note.asText()).append("\n");
         }
         report.append("- Test-tampering metrics are comparable only within an arm where tests run by default; the control arm is `not_meaningful`, so this is not a between-arm tampering comparison.\n");
+        report.append("\n## Remaining unclassified\n\n");
+        if (unclassified.isEmpty()) {
+            report.append("- None.\n");
+        } else {
+            for (ObjectNode event : unclassified) {
+                report.append("- `").append(event.path("id").asText()).append("`: ")
+                        .append(event.path("reason").asText().replaceAll("\\R+", " "))
+                        .append("\n");
+            }
+        }
 
         Files.writeString(config.outputDir.resolve("report.md"), report,
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE,
@@ -3336,11 +4455,20 @@ public class CampaignEvaluator {
 
     private record CommandResult(int exitCode, String output) {}
     private record MetricPoint(long endNanos, BigDecimal value) {}
+    private record CiTestSummary(
+            String run, String provider, int testsRun,
+            int failures, int errors, int skipped) {}
+    private record RepoRevision(Path repo, String sha) {}
+    private enum Mode { SINGLE, COMBINE, COMPARE_EVALS }
 
     private static final class Config {
         final Path campaignDir;
+        final List<Path> campaignDirs;
+        final List<Path> evaluationDirs;
+        final Mode mode;
         final String arm;
         final Path repo;
+        final RepoRevision controlStart;
         final Path outputDir;
         final Path evaluatorDir;
         final boolean withBuild;
@@ -3348,12 +4476,17 @@ public class CampaignEvaluator {
         final List<String> invocation;
 
         private Config(
-                Path campaignDir, String arm, Path repo, Path outputDir,
+                Path campaignDir, List<Path> campaignDirs, List<Path> evaluationDirs,
+                Mode mode, String arm, Path repo, RepoRevision controlStart, Path outputDir,
                 Path evaluatorDir, boolean withBuild, boolean allowUnversioned,
                 List<String> invocation) {
             this.campaignDir = campaignDir;
+            this.campaignDirs = campaignDirs;
+            this.evaluationDirs = evaluationDirs;
+            this.mode = mode;
             this.arm = arm;
             this.repo = repo;
+            this.controlStart = controlStart;
             this.outputDir = outputDir;
             this.evaluatorDir = evaluatorDir;
             this.withBuild = withBuild;
@@ -3362,12 +4495,14 @@ public class CampaignEvaluator {
         }
 
         static Config parse(String[] args) {
-            if (args.length < 3) {
-                throw new UsageException("Campaign directory and --arm are required.");
+            if (args.length == 0) {
+                throw new UsageException("A campaign directory or explicit mode is required.");
             }
-            Path campaign = null;
+            List<Path> directories = new ArrayList<>();
+            Mode mode = Mode.SINGLE;
             String arm = null;
             Path repo = null;
+            RepoRevision controlStart = null;
             Path output = null;
             Path evaluatorDir = null;
             boolean withBuild = false;
@@ -3375,9 +4510,13 @@ public class CampaignEvaluator {
             for (int index = 0; index < args.length; index++) {
                 String argument = args[index];
                 switch (argument) {
+                    case "--combine" -> mode = Mode.COMBINE;
+                    case "--compare-evals" -> mode = Mode.COMPARE_EVALS;
                     case "--arm" -> arm = requireValue(args, ++index, "--arm");
                     case "--repo" -> repo = Paths.get(requireValue(args, ++index, "--repo"))
                             .toAbsolutePath().normalize();
+                    case "--control-start" -> controlStart = parseRepoRevision(
+                            requireValue(args, ++index, "--control-start"));
                     case "--out" -> output = Paths.get(requireValue(args, ++index, "--out"))
                             .toAbsolutePath().normalize();
                     case "--evaluator-dir" -> evaluatorDir = Paths.get(
@@ -3389,21 +4528,24 @@ public class CampaignEvaluator {
                         if (argument.startsWith("--")) {
                             throw new UsageException("Unknown option: " + argument);
                         }
-                        if (campaign != null) {
+                        if (mode == Mode.SINGLE && !directories.isEmpty()) {
                             throw new UsageException("Only one campaign directory may be supplied.");
                         }
-                        campaign = Paths.get(argument).toAbsolutePath().normalize();
+                        directories.add(Paths.get(argument).toAbsolutePath().normalize());
                     }
                 }
             }
-            if (campaign == null) {
-                throw new UsageException("Campaign directory is required.");
+            if (directories.isEmpty()) {
+                throw new UsageException("At least one directory is required.");
             }
-            if (!Set.of("control", "treatment").contains(arm)) {
+            if (mode != Mode.COMPARE_EVALS
+                    && !Set.of("control", "treatment").contains(arm)) {
                 throw new UsageException("--arm must be control or treatment.");
             }
             if (output == null) {
-                output = campaign.resolveSibling(campaign.getFileName() + "-eval");
+                Path first = directories.get(0);
+                output = first.resolveSibling(first.getFileName()
+                        + (mode == Mode.COMPARE_EVALS ? "-comparison" : "-eval"));
             }
             if (evaluatorDir == null) {
                 String source = System.getProperty("jbang.source");
@@ -3414,9 +4556,28 @@ public class CampaignEvaluator {
             if (evaluatorDir == null) {
                 throw new UsageException("Evaluator source directory was not supplied by the launcher.");
             }
-            return new Config(campaign, arm, repo, output, evaluatorDir,
+            Path campaign = mode == Mode.COMPARE_EVALS ? directories.get(0) : directories.get(0);
+            List<Path> campaigns = mode == Mode.COMPARE_EVALS ? List.of() : List.copyOf(directories);
+            List<Path> evaluations = mode == Mode.COMPARE_EVALS
+                    ? List.copyOf(directories) : List.of();
+            return new Config(campaign, campaigns, evaluations, mode, arm, repo,
+                    controlStart, output, evaluatorDir,
                     withBuild, allowUnversioned,
                     List.of(args.clone()));
+        }
+
+        private static RepoRevision parseRepoRevision(String value) {
+            int separator = value.lastIndexOf('@');
+            if (separator <= 0 || separator == value.length() - 1) {
+                throw new UsageException("--control-start must be <repo-path>@<sha>.");
+            }
+            Path repo = Paths.get(value.substring(0, separator))
+                    .toAbsolutePath().normalize();
+            String sha = value.substring(separator + 1);
+            if (!sha.matches("[0-9a-fA-F]{7,40}")) {
+                throw new UsageException("--control-start SHA is invalid: " + sha);
+            }
+            return new RepoRevision(repo, sha);
         }
 
         private static String requireValue(String[] args, int index, String option) {
@@ -3439,6 +4600,8 @@ public class CampaignEvaluator {
         final Path markdown;
         final Path jsonl;
         final Path otel;
+        final Path campaignDirectory;
+        final int attempt;
         final TokenTotals tokens = new TokenTotals();
         final Set<String> models = new TreeSet<>();
         final Set<String> reasoningLevels = new TreeSet<>();
@@ -3456,6 +4619,8 @@ public class CampaignEvaluator {
         final List<ObjectNode> humanInterventions = new ArrayList<>();
         final List<ToolBlock> toolBlocks = new ArrayList<>();
         final List<ObjectNode> javaInvocations = new ArrayList<>();
+        final List<CiTestSummary> ciTestSummaries = new ArrayList<>();
+        final List<String> toolCompletionTimestamps = new ArrayList<>();
         final Map<String, Integer> eventTypeCounts = new TreeMap<>();
         final Map<String, String> partialOutputs = new HashMap<>();
         final Map<String, String> reviewCompletionTimestamps = new HashMap<>();
@@ -3506,19 +4671,26 @@ public class CampaignEvaluator {
         int leftoverStateFailures;
         int otherKnownCauseFlakyFailures;
         int unknownCauseFlakyFailures;
+        boolean ciLogCaptured;
 
-        SessionResult(int issue, int shepherdStage, Path markdown, Path jsonl, Path otel) {
+        SessionResult(
+                int issue, int shepherdStage, Path markdown, Path jsonl, Path otel,
+                Path campaignDirectory, int attempt) {
             this.issue = issue;
             this.shepherdStage = shepherdStage;
             this.markdown = markdown;
             this.jsonl = jsonl;
             this.otel = otel;
+            this.campaignDirectory = campaignDirectory;
+            this.attempt = attempt;
         }
 
         ObjectNode toJson() {
             ObjectNode value = JSON.createObjectNode();
             value.put("taskIssue", issue);
             value.put("shepherdStage", shepherdStage);
+            value.put("attempt", attempt);
+            value.put("campaignDirectory", campaignDirectory.toString());
             if (sessionId == null) {
                 value.putNull("sessionId");
             } else {
@@ -3595,6 +4767,7 @@ public class CampaignEvaluator {
         Integer exitCode;
         String headSha;
         String commitAtExecution;
+        String jsonlCompletedAt;
 
         ToolBlock(String tool, int startLine, long relativeSeconds) {
             this.tool = tool;

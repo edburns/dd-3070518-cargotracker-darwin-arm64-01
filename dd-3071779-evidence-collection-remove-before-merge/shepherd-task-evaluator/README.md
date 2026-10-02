@@ -1,7 +1,8 @@
 # Shepherd Task Evaluator
 
-`shepherd-task-evaluator` converts one local Shepherd campaign directory into
-structured trace, convergence, cost, environment, and repository findings.
+`shepherd-task-evaluator` converts one or more local Shepherd campaign
+directories into structured trace, convergence, cost, environment, repository,
+CI-gate, defect, and start-equivalence findings.
 
 ## Requirements
 
@@ -17,10 +18,39 @@ structured trace, convergence, cost, environment, and repository findings.
 
 ```sh
 ./evaluate-campaign <campaign-dir> --arm <control|treatment> \
-  [--repo <path>] [--out <dir>] [--with-build] [--allow-unversioned]
+  [--repo <path>] [--control-start <repo-path>@<sha>] [--out <dir>] \
+  [--with-build] [--allow-unversioned]
 ```
 
 The default output directory is `<campaign-dir>-eval`.
+
+### Combine campaign attempts
+
+Directories must have the same `campaignId` and be supplied in `startedAt`
+order:
+
+```sh
+./evaluate-campaign --combine <dir1> <dir2> ... \
+  --arm <control|treatment> [--repo <path>] [--out <dir>]
+```
+
+The output has one campaign row and one task row per issue. Cost, tokens, and
+session time are summed. Inter-directory gap is reported separately and is not
+counted as orchestration overhead. Sessions and events retain their attempt and
+source campaign directory. The repository start is selected from the first
+chronological task and the final revision from the last.
+
+### Compare evaluation invariants
+
+```sh
+./evaluate-campaign --compare-evals <eval-dir1> <eval-dir2> ... --out <dir>
+```
+
+This reads each directory's `findings.json` and writes
+`invariant-drift.json` plus a warning table in `report.md`. It compares CLI
+versions, model/reasoning settings, stage-30 skill content lengths, and
+skill-content verification. A hash artifact verifies content when present;
+otherwise content identity remains unverified.
 
 ```text
 findings.json
@@ -86,6 +116,35 @@ for explicit development runs and emits a report warning.
 - PMD CPD uses a recorded minimum-token threshold of 100.
 - `--with-build` compiles the start and final revisions with pinned JDK 17 and
   `-Xlint:deprecation,removal`.
+- The Maven project root is inferred independently at every analyzed SHA.
+  Workflow `working-directory` and `mvn -f`/`--file` evidence wins; otherwise
+  the shallowest `pom.xml` containing `<build>` is used. Compiler
+  source/target/release (properties or plugin configuration), test skipping,
+  CPD, build warnings, and production/test/config splits use that root.
+- `--control-start` performs a cross-repository, rename-aware start diff.
+  Every path is classified as `guardrail_infrastructure`, `relocation_only`,
+  `formatting_only`, `substantive_production`, `campaign_inputs`, or `other`.
+  Campaign-input line counts and line diffs are preserved; relocation and
+  campaign-input differences are reported as confounds.
+- CI workflows and the project POM are read at campaign start. Every observed
+  job/step and plugin bound to `validate`/`verify` is mapped to `formatting`,
+  `static_analysis`, `compiler`, `unit_tests`, `container_tests`, or
+  `ci_other`; absent gates are `not_present`. Copilot orchestration checks
+  (`Running Copilot cloud agent`, `Addressing comment on PR #N`, and
+  `copilot`) are excluded.
+- Surefire and Failsafe summaries are parsed from captured CI job logs and
+  reported per run and task. Test execution is `unavailable` only when no CI
+  log was captured.
+- Product defects have a non-null detection gate and one of
+  `behavioral`, `completeness`, `style`, or `static_analysis_finding`.
+  Formatting/Spotless findings are style. Style and static-analysis findings
+  are comparable between arms only when the corresponding gate exists in both.
+- A stage-30 change request is one defect with an `itemCount`. Fixes are
+  accepted only when the candidate commit differs from and descends from the
+  detected head. Negative time-to-fix is retained as an anomaly.
+- Detection timestamps prefer GitHub-reported command output, then JSONL tool
+  completion time, then transcript `<sub>` offsets; the selected source is
+  recorded.
 - OTEL input tokens already include cache-read and cache-write tokens. The
   evaluator reports a derived uncached-input count instead of adding the three
   values together.
@@ -117,6 +176,9 @@ per-file hashes. The evaluator preserves the artifact under
 campaign, content identity is reported as unverified; telemetry content lengths
 remain available but are not treated as proof.
 
-`summary.csv` contains separate event-count columns for every classification
-origin so harness and local-environment events can be excluded when comparing
-arms.
+`summary.csv` contains attempts, counts per defect class, and separate
+event-count columns for every classification origin. `defects.csv` includes
+defect class, item count, local/CI location, timestamp sources, ancestry-checked
+resolution, and timing anomalies. `report.md` includes acceptance checks,
+start-equivalence/confound tables, campaign-input diffs, invariant drift, and a
+one-line reason for every remaining unclassified event.
