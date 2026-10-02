@@ -948,24 +948,29 @@ public class CampaignEvaluator {
         if (!"bash".equals(block.tool)) {
             return;
         }
-        List<String> failedChecks = failedCiChecks(block.output).stream()
-                .filter(Predicate.not(CampaignEvaluator::isCopilotOrchestrationCheck))
-                .filter(Predicate.not(CampaignEvaluator::isAggregateWorkflowCheck))
+        boolean failedLog = block.command != null
+                && block.command.contains("gh run view")
+                && block.command.contains("--log-failed");
+        List<CiFailure> ciFailures = failedCiFailures(block.output, failedLog).stream()
+                .filter(failure -> !isCopilotOrchestrationCheck(failure.job()))
+                .filter(failure -> !isAggregateWorkflowCheck(failure.job()))
                 .toList();
+        boolean preciseCiFailure = ciFailures.stream()
+                .anyMatch(failure -> failure.step() != null);
         if (block.exitCode != null && block.exitCode != 0) {
-            if (failedChecks.isEmpty()) {
+            if (ciFailures.isEmpty()) {
                 addEvent(session, block, "nonzero_tool_exit",
                         detector(block), block.exitCode, classifyFailure(block));
             }
             session.nonzeroToolExits++;
         }
-        if (block.output.contains("BUILD FAILURE") && failedChecks.isEmpty()) {
+        if (block.output.contains("BUILD FAILURE") && ciFailures.isEmpty()) {
             addEvent(session, block, "build_failure",
                     detector(block), block.exitCode, classifyFailure(block));
         }
         Matcher tests = TEST_SUMMARY.matcher(block.output);
         Set<String> seen = new HashSet<>();
-        while (tests.find()) {
+        while (!preciseCiFailure && tests.find()) {
             int failures = Integer.parseInt(tests.group(2));
             int errors = Integer.parseInt(tests.group(3));
             String summary = tests.group();
@@ -991,15 +996,32 @@ public class CampaignEvaluator {
                     detector(block), block.exitCode, classification);
             block.testFailureEvents.add(event);
         }
-        for (String check : failedChecks) {
-            String gate = ciGate(check);
-            ObjectNode classification = classification(
-                    "product_defect", null, "FAILED_CI_CHECK",
-                    "A completed CI check reported failure.");
+        for (CiFailure failure : ciFailures) {
+            ObjectNode classification;
+            String gate;
+            if (failure.step() == null) {
+                gate = ciGate(failure.job());
+                classification = unclassifiedClassification(
+                        "The failing CI job was identified, but no failing step was captured.");
+            } else {
+                gate = ciGate(failure.step());
+                classification = ciStepClassification(failure.step());
+            }
             ObjectNode event = addEvent(session, block, "failed_ci_check",
                     gate, null, classification);
-            event.put("commandOrCheck", excerpt(check, 300));
+            event.put("commandOrCheck", excerpt(
+                    failure.step() == null ? failure.job()
+                            : failure.job() + " / " + failure.step(), 300));
             event.put("where", "ci");
+            event.put("gateSource", failure.source());
+            event.put("ciJob", failure.job());
+            if (failure.step() == null) {
+                event.putNull("ciFailingStep");
+                event.put("fallbackGate", gate);
+            } else {
+                event.put("ciFailingStep", failure.step());
+                event.put("ciFailingStepGate", gate);
+            }
         }
         for (String line : block.output.split("\\R")) {
             if (line.trim().startsWith("SHEPHERD FAILED:")) {
@@ -1081,8 +1103,42 @@ public class CampaignEvaluator {
                 || lower.contains("surefire") || lower.contains("failsafe");
     }
 
-    private static List<String> failedCiChecks(String output) {
-        Set<String> checks = new LinkedHashSet<>();
+    static List<CiFailure> failedCiFailures(String output, boolean failedLog) {
+        Map<String, CiFailure> failures = new LinkedHashMap<>();
+        if (failedLog) {
+            Map<String, StringBuilder> stepLogs = new LinkedHashMap<>();
+            Map<String, CiFailure> stepIdentities = new LinkedHashMap<>();
+            Matcher logLine = Pattern.compile(
+                    "(?m)^([^\\t\\r\\n]+)\\t([^\\t\\r\\n]+)\\t(.*)$")
+                    .matcher(output);
+            while (logLine.find()) {
+                String job = logLine.group(1).strip();
+                String step = logLine.group(2).strip();
+                if (!job.isBlank() && !step.isBlank()) {
+                    CiFailure failure = new CiFailure(job, step, "step_log");
+                    String key = job + "\u0000" + step;
+                    stepIdentities.put(key, failure);
+                    stepLogs.computeIfAbsent(key, ignored -> new StringBuilder())
+                            .append(logLine.group(3)).append('\n');
+                }
+            }
+            Set<String> failedJobs = new HashSet<>();
+            stepLogs.forEach((key, log) -> {
+                if (failedStepLog(log.toString())) {
+                    CiFailure failure = stepIdentities.get(key);
+                    if (failedJobs.add(failure.job())) {
+                        failures.put(key, failure);
+                    }
+                }
+            });
+            if (failures.isEmpty()) {
+                String step = ciFailingStep(output);
+                if (step != null) {
+                    failures.put("\u0000" + step,
+                            new CiFailure("unknown", step, "step_log"));
+                }
+            }
+        }
         for (JsonNode root : parseJsonValues(output)) {
             Deque<JsonNode> pending = new ArrayDeque<>();
             pending.add(root);
@@ -1096,9 +1152,13 @@ public class CampaignEvaluator {
                 }
                 String conclusion = node.path("conclusion").asText().toLowerCase(Locale.ROOT);
                 if (Set.of("failure", "timed_out", "cancelled").contains(conclusion)) {
-                    String name = firstText(node, "name", "context", "workflowName");
-                    if (name != null && !name.isBlank()) {
-                        checks.add(name);
+                    String job = firstText(node, "name", "context", "workflowName");
+                    String step = firstText(node, "stepName", "step");
+                    if (job != null && !job.isBlank()) {
+                        CiFailure failure = new CiFailure(job, step,
+                                step == null || step.isBlank()
+                                        ? "job_fallback" : "status_rollup_step");
+                        failures.put(job + "\u0000" + Objects.toString(step, ""), failure);
                     }
                 }
             }
@@ -1107,9 +1167,34 @@ public class CampaignEvaluator {
                 "(?m)^([^\\t\\r\\n]+)\\t(?:fail|failure|timed_out|cancelled)\\t")
                 .matcher(output);
         while (tabular.find()) {
-            checks.add(tabular.group(1).trim());
+            String job = tabular.group(1).trim();
+            failures.put(job + "\u0000",
+                    new CiFailure(job, null, "job_fallback"));
         }
-        return new ArrayList<>(checks);
+        return new ArrayList<>(failures.values());
+    }
+
+    private static boolean failedStepLog(String log) {
+        String lower = log.toLowerCase(Locale.ROOT);
+        Matcher summary = TEST_SUMMARY.matcher(log);
+        while (summary.find()) {
+            if (Integer.parseInt(summary.group(2)) > 0
+                    || Integer.parseInt(summary.group(3)) > 0) {
+                return true;
+            }
+        }
+        return lower.contains("##[error]")
+                || lower.contains("build failure")
+                || lower.contains("[error]")
+                || lower.matches("(?s).*process completed with exit code\\s+[1-9]\\d*.*")
+                || lower.contains("test inventory does not match");
+    }
+
+    private static List<String> failedCiChecks(String output) {
+        return failedCiFailures(output, false).stream()
+                .map(CiFailure::job)
+                .distinct()
+                .toList();
     }
 
     private static boolean isCopilotOrchestrationCheck(String check) {
@@ -1301,11 +1386,8 @@ public class CampaignEvaluator {
         boolean productDefect = "product_defect".equals(
                 classification.path("category").asText());
         if (productDefect) {
-            String failingStep = isCiBlock(block) ? ciFailingStep(block.output) : null;
-            String normalizedGate = failingStep == null
-                    ? gate == null || gate.isBlank() || "ci".equals(gate)
-                    ? "ci_other" : gate
-                    : ciGate(failingStep);
+            String normalizedGate = gate == null || gate.isBlank() || "ci".equals(gate)
+                    ? "ci_other" : gate;
             event.put("detectionGate", normalizedGate);
             canonicalizeProductClassification(
                     classification, normalizedGate, kind, block.output);
@@ -1316,13 +1398,6 @@ public class CampaignEvaluator {
             event.putNull("defectClass");
         }
         event.put("where", isCiBlock(block) ? "ci" : "local");
-        if (isCiBlock(block)) {
-            String failingStep = ciFailingStep(block.output);
-            if (failingStep != null) {
-                event.put("ciFailingStep", failingStep);
-                event.put("ciFailingStepGate", ciGate(failingStep));
-            }
-        }
         event.put("activity", activity(block));
         event.put("commandOrCheck", excerpt(block.command == null ? block.tool : block.command, 600));
         if (exitCode == null) {
@@ -1370,21 +1445,14 @@ public class CampaignEvaluator {
         return candidate;
     }
 
-    private static void canonicalizeProductClassification(
+    static void canonicalizeProductClassification(
             ObjectNode classification, String gate, String kind, String evidence) {
         String subtype = classification.path("subtype").asText("");
-        String lower = evidence.toLowerCase(Locale.ROOT);
         if ("formatting".equals(gate) || kind.contains("format")) {
             subtype = "formatting";
-        } else if ("build_contract".equals(gate)) {
-            subtype = "test_inventory";
-        } else if ("stage_30_gate".equals(gate)) {
-            if (subtype.isBlank() || "completeness_gap".equals(subtype)) {
-                subtype = stage30Subtype(lower);
-            }
         } else if ("ccra_review".equals(gate)) {
             subtype = "behavioral_defect";
-        } else if ("static_analysis".equals(gate)) {
+        } else if ("static_analysis".equals(gate) || "security".equals(gate)) {
             subtype = "static_analysis_finding";
         } else if (subtype.isBlank()) {
             subtype = "behavioral_defect";
@@ -1393,25 +1461,42 @@ public class CampaignEvaluator {
         classification.put("origin", classificationOrigin("product_defect", subtype));
     }
 
-    private static String stage30Subtype(String body) {
-        String lower = body.toLowerCase(Locale.ROOT);
-        if (lower.contains("diff scope") || lower.contains("scope violation")
-                || lower.contains("out-of-scope") || lower.contains("out of scope")
-                || lower.contains("unrelated") || lower.contains("diff is confined")
-                || lower.contains("wrapper changes")) {
-            return "scope_violation";
+    static ObjectNode ciStepClassification(String step) {
+        String lower = step.toLowerCase(Locale.ROOT);
+        ObjectNode result;
+        if (lower.contains("write test inventory")) {
+            result = classification("product_defect", "test_inventory",
+                    "CI_TEST_INVENTORY_STEP",
+                    "The failing CI step enforces the repository test inventory.");
+        } else if (lower.contains("verify-build-contract.sh")) {
+            result = contractViolation("build");
+        } else if (lower.contains("verify-compatibility-contract.sh")) {
+            result = contractViolation("compatibility");
+        } else if (lower.contains("verify-source-gates.sh")) {
+            result = contractViolation("source_gates");
+        } else {
+            result = classification("product_defect", null,
+                    "FAILED_CI_STEP",
+                    "A captured CI step reported failure.");
         }
-        if (lower.contains("spotless") || lower.contains("formatting")) {
-            return "formatting";
-        }
-        return "completeness_gap";
+        return result;
     }
 
-    private static String defectClass(String subtype) {
+    private static ObjectNode contractViolation(String contract) {
+        ObjectNode result = classification(
+                "product_defect", "contract_violation",
+                "CI_CONTRACT_STEP",
+                "The failing CI step enforces the " + contract + " contract.");
+        result.put("contract", contract);
+        return result;
+    }
+
+    static String defectClass(String subtype) {
         return switch (subtype) {
             case "formatting" -> "style";
             case "static_analysis_finding" -> "static_analysis_finding";
-            case "scope_violation", "test_inventory", "completeness_gap" -> "completeness";
+            case "scope_violation", "test_inventory", "contract_violation",
+                    "completeness_gap" -> "completeness";
             case "behavioral_defect" -> "behavioral";
             default -> "behavioral";
         };
@@ -1676,8 +1761,9 @@ public class CampaignEvaluator {
             String body = stage30RequestBody(block.command);
             String key = "posted\u0000" + body;
             if (session.changeRequestKeys.add(key)) {
-                String subtype = stage30Subtype(body);
-                boolean alreadyDetected = events.stream()
+                Stage30Decision decision = stage30Decision(body);
+                String subtype = decision.subtype();
+                boolean alreadyDetected = decision.classified() && events.stream()
                         .anyMatch(event -> event.path("taskIssue").asInt() == session.issue
                                 && "product_defect".equals(event.path("classification")
                                 .path("category").asText())
@@ -1686,11 +1772,14 @@ public class CampaignEvaluator {
                 if (alreadyDetected) {
                     return;
                 }
-                ObjectNode classification = classification(
-                        "product_defect", subtype, "STAGE_30_CHANGE_REQUEST",
-                        "The stage-30 gate requested a substantive code or test change.");
+                ObjectNode classification = decision.classified()
+                        ? classification(
+                                "product_defect", subtype, "STAGE_30_CHANGE_REQUEST",
+                                "The stage-30 gate requested a substantive code or test change.")
+                        : unclassifiedClassification(decision.explanation());
                 ObjectNode event = addEvent(session, block, "stage_30_change_request",
                         "stage_30_gate", null, classification);
+                event.put("gateSource", decision.source());
                 Matcher pr = Pattern.compile(
                         "(?:PR_NUMBER|PR)=['\"]?(\\d+)").matcher(block.command);
                 if (pr.find()) {
@@ -1739,25 +1828,68 @@ public class CampaignEvaluator {
                     String key = node.path("submitted_at").asText()
                             + "\u0000" + node.path("body").asText();
                     if (session.changeRequestKeys.add(key)) {
-                        ObjectNode classification = classification(
-                                "product_defect", "completeness_gap", "STAGE_30_CHANGE_REQUEST",
-                                "The stage-30 gate requested a substantive code or test change.");
+                        String body = node.path("body").asText();
+                        Stage30Decision decision = stage30Decision(body);
+                        ObjectNode classification = decision.classified()
+                                ? classification(
+                                        "product_defect", decision.subtype(),
+                                        "STAGE_30_CHANGE_REQUEST",
+                                        "The stage-30 gate requested a substantive code or test change.")
+                                : unclassifiedClassification(decision.explanation());
                         ObjectNode event = addEvent(session, block, "stage_30_change_request",
                                 "stage_30_gate", null, classification);
+                        event.put("gateSource", decision.source());
                         if (node.path("submitted_at").isTextual()) {
                             event.put("timestamp", node.path("submitted_at").asText());
                             event.put("timestampSource",
                                     "github_review_submitted_at");
                         }
                         ((ObjectNode) event.path("evidence")).put(
-                                "excerpt", excerpt(node.path("body").asText(), 1200));
+                                "excerpt", excerpt(body, 1200));
                         event.put("itemCount",
-                                changeRequestItemCount(node.path("body").asText()));
+                                changeRequestItemCount(body));
                     }
                 }
+
                 node.elements().forEachRemaining(pending::addLast);
             }
         }
+    }
+
+    static Stage30Decision stage30Decision(String body) {
+        List<String> headings = Arrays.stream(body.split("\\R"))
+                .map(String::strip)
+                .filter(line -> line.matches("#{1,6}\\s+.+"))
+                .map(line -> line.replaceFirst("^#{1,6}\\s+", "")
+                        .toLowerCase(Locale.ROOT))
+                .toList();
+        boolean scopeHeading = headings.stream().anyMatch(heading ->
+                heading.contains("diff scope violation")
+                        || heading.startsWith("scope violation")
+                        || heading.contains("issue requirement failure: diff scope")
+                        || Pattern.compile("(^|\\s)scope\\s*:").matcher(heading).find());
+        if (scopeHeading) {
+            return new Stage30Decision(
+                    "scope_violation", true, "stage30_heading", "");
+        }
+        boolean formattingHeading = headings.stream().anyMatch(heading ->
+                heading.contains("formatting") || heading.contains("spotless"));
+        if (formattingHeading) {
+            return new Stage30Decision(
+                    "formatting", true, "stage30_heading", "");
+        }
+        String lower = body.toLowerCase(Locale.ROOT);
+        if (lower.contains("diff scope") || lower.contains("scope violation")
+                || lower.contains("out-of-scope") || lower.contains("out of scope")
+                || lower.contains("unrelated") || lower.contains("diff is confined")
+                || lower.contains("wrapper changes")) {
+            return new Stage30Decision(
+                    "scope_violation", false, "free_text_fallback",
+                    "Scope-like free text was present, but the stage-30 request "
+                            + "had no recognized scope heading.");
+        }
+        return new Stage30Decision(
+                "completeness_gap", true, "stage30_heading", "");
     }
 
     private static int changeRequestItemCount(String body) {
@@ -2654,8 +2786,9 @@ public class CampaignEvaluator {
         result.put("projectRoot", projectRoot);
         ArrayNode workflows = result.putArray("workflows");
         Map<String, Integer> gateCounts = new LinkedHashMap<>();
-        for (String gate : List.of("formatting", "build_contract", "static_analysis", "compiler",
-                "unit_tests", "container_tests", "ci_other")) {
+        for (String gate : List.of("formatting", "build_contract", "security",
+                "static_analysis", "compiler", "unit_tests",
+                "container_tests", "ci_other")) {
             gateCounts.put(gate, 0);
         }
         Set<String> ciOtherNames = new TreeSet<>();
@@ -2778,15 +2911,18 @@ public class CampaignEvaluator {
         return matcher.find() ? matcher.group(1).trim() : "";
     }
 
-    private static String ciGate(String value) {
+    static String ciGate(String value) {
         String lower = value.toLowerCase(Locale.ROOT);
-        String trimmed = lower.trim();
-        if (trimmed.equals("build") || lower.contains("write test inventory")
+        if (lower.contains("write test inventory")
                 || lower.contains("verify-build-contract.sh")
                 || lower.contains("verify-compatibility-contract.sh")
                 || lower.contains("verify-source-gates.sh")
                 || lower.contains("test inventory")) {
             return "build_contract";
+        }
+        if (lower.contains("run dependency security and delta gate")
+                || lower.contains("dependency security")) {
+            return "security";
         }
         if (lower.contains("format") || lower.contains("spotless")) return "formatting";
         if (lower.contains("pmd") || lower.contains("checkstyle")
@@ -2795,9 +2931,13 @@ public class CampaignEvaluator {
                 || lower.contains("error prone")) {
             return "static_analysis";
         }
-        if (lower.contains("compile") || lower.contains("compiler")) return "compiler";
+        if (lower.contains("compile") || lower.contains("compiler")
+                || lower.contains("build canonical war")) return "compiler";
         if (lower.contains("failsafe") || lower.contains("arquillian")
-                || lower.contains("container")) return "container_tests";
+                || lower.contains("container")
+                || lower.contains("run open liberty integration tests")) {
+            return "container_tests";
+        }
         if (lower.contains("surefire") || lower.contains("unit test")
                 || lower.matches(".*\\bmvn\\b.*\\btest\\b.*")) return "unit_tests";
         return "ci_other";
@@ -3992,6 +4132,8 @@ public class CampaignEvaluator {
         addAcceptance(checks, "defect_class_subtype_consistent",
                 consistentClasses, consistentClasses);
         List<ObjectNode> guardrailUnclassified = unclassified.stream()
+                .filter(event -> !"job_fallback".equals(
+                        event.path("gateSource").asText()))
                 .filter(event -> {
                     String evidence = event.path("evidence").path("excerpt")
                             .asText("").toLowerCase(Locale.ROOT);
@@ -4702,6 +4844,9 @@ public class CampaignEvaluator {
 
     private record CommandResult(int exitCode, String output) {}
     private record MetricPoint(long endNanos, BigDecimal value) {}
+    record CiFailure(String job, String step, String source) {}
+    record Stage30Decision(
+            String subtype, boolean classified, String source, String explanation) {}
     private record CiTestSummary(
             String run, String provider, int testsRun,
             int failures, int errors, int skipped) {}

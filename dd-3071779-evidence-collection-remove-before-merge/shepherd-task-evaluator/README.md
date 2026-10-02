@@ -24,6 +24,12 @@ CI-gate, defect, and start-equivalence findings.
 
 The default output directory is `<campaign-dir>-eval`.
 
+## Tests
+
+```sh
+jbang CampaignEvaluatorTest.java
+```
+
 ### Combine campaign attempts
 
 Directories must have the same `campaignId` and be supplied in `startedAt`
@@ -135,9 +141,17 @@ for explicit development runs and emits a report warning.
   `container_tests`, or `ci_other`; absent gates are `not_present`.
   Repository-contract steps such as test-inventory generation and
   `verify-*-contract.sh`/`verify-source-gates.sh` use `build_contract`.
+  Test-inventory failures use subtype `test_inventory`; contract scripts use
+  `contract_violation` and name the specific contract. Dependency security
+  uses the separate `security` gate, and Open Liberty integration-test steps
+  use `container_tests`.
   Every named `ci_other` step is listed for review. Copilot orchestration checks
   (`Running Copilot cloud agent`, `Addressing comment on PR #N`, and
   `copilot`) are excluded.
+- CI failure gates are derived from the failing step in `--log-failed` or
+  status-rollup evidence. A job-only observation records
+  `gateSource=job_fallback` and remains unclassified until step evidence is
+  available.
 - Surefire and Failsafe summaries are parsed from captured CI job logs and
   reported per run and task. When the transcript captured only
   `gh run view --log-failed`, passing-run test execution is `not_captured`
@@ -152,6 +166,10 @@ for explicit development runs and emits a report warning.
 - A stage-30 change request is one defect with an `itemCount`. Fixes are
   accepted only when the candidate commit differs from and descends from the
   detected head. Negative time-to-fix is retained as an anomaly.
+- Stage-30 `scope_violation` classification requires a scope heading such as
+  `diff scope violation`, `Scope violation:`, `Issue requirement failure:
+  diff scope`, or `Scope:`. Scope-like free text without such a heading is
+  retained as unclassified evidence.
 - Detection timestamps prefer GitHub-reported command output, then JSONL tool
   completion time, then transcript `<sub>` offsets; the selected source is
   recorded.
