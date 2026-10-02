@@ -2952,13 +2952,14 @@ public class CampaignEvaluator {
         try {
             worktree = createWorktree("cpd", sha);
             Map<String, String> environment = java17Environment();
+            Path projectDirectory = projectDirectory(worktree, projectRoot);
             CommandResult run = mavenCommand(List.of(
-                    "mvn", "-q", "-DskipTests",
+                    mavenExecutable(projectDirectory), "-q", "-DskipTests",
                     "-Dpmd.minimumTokens=" + CPD_MINIMUM_TOKENS,
                     "-Dpmd.includeTests=true",
                     "org.apache.maven.plugins:maven-pmd-plugin:3.25.0:cpd"),
-                    projectDirectory(worktree, projectRoot), environment);
-            Path report = projectDirectory(worktree, projectRoot).resolve("target/cpd.xml");
+                    projectDirectory, environment);
+            Path report = projectDirectory.resolve("target/cpd.xml");
             if (run.exitCode != 0 || !Files.isRegularFile(report)) {
                 return CpdResult.unavailable(excerpt(run.output, 1200));
             }
@@ -3037,11 +3038,12 @@ public class CampaignEvaluator {
                         "Pinned JDK 17 is not installed at the required path.");
             }
             worktree = createWorktree("build", sha);
+            Path projectDirectory = projectDirectory(worktree, projectRoot);
             CommandResult result = mavenCommand(List.of(
-                    "mvn", "-DskipTests",
+                    mavenExecutable(projectDirectory), "-DskipTests",
                     "-Dmaven.compiler.showWarnings=true",
                     "-Dmaven.compiler.compilerArgs=-Xlint:deprecation,removal",
-                    "test-compile"), projectDirectory(worktree, projectRoot),
+                    "test-compile"), projectDirectory,
                     java17Environment());
             String worktreePath = worktree.toString();
             Set<String> warnings = Arrays.stream(result.output.split("\\R"))
@@ -3064,6 +3066,11 @@ public class CampaignEvaluator {
     private static Path projectDirectory(Path worktree, String projectRoot) {
         return projectRoot == null || projectRoot.isBlank() || ".".equals(projectRoot)
                 ? worktree : worktree.resolve(projectRoot);
+    }
+
+    private static String mavenExecutable(Path projectDirectory) {
+        return Files.isRegularFile(projectDirectory.resolve("mvnw"))
+                ? "./mvnw" : "mvn";
     }
 
     private Path createWorktree(String purpose, String sha) throws IOException {
