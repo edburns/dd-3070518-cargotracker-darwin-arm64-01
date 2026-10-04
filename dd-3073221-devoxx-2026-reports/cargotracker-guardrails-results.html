@@ -87,7 +87,7 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 <h2>Summary</h2>
 <p class="lead">With one control run and two treatment runs, the results support a case study, not a statistical comparison. Five claims hold up against the data:</p>
 <ol class="claims">
-<li><strong>Behavioral defects still reached code review in both arms.</strong> Control: 1 of 1 caught by Copilot Code Review. Treatment: 5 of 6 caught by review, 1 caught earlier by a CI unit test.</li>
+<li><strong>Behavioral defects still reached code review in both arms.</strong> Control: 1 of 1 caught by Copilot Code Review. Treatment: 3 of 4 caught by review, 1 caught earlier by a CI unit test.</li>
 <li><strong>Guardrails add their own failure class.</strong> The treatment's test-inventory check failed 4 times across the two runs. These are obligations the guardrail creates, so the control has no equivalent.</li>
 <li><strong>Agents never produce formatted code.</strong> Spotless runs in both arms and failed in every run (3, 2 and 4 times). Two treatment violations came from fix commits made during review.</li>
 <li><strong>Some failure modes repeat exactly, in every run, in both arms.</strong> The same 16-line duplicated dialog code, out-of-scope Maven Wrapper files, and the same invalid <code>gh</code> flag combinations appear in all three runs.</li>
@@ -154,7 +154,7 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 </svg>
 <figcaption>Evaluator 0.4.4 <code>defects.csv</code> for each run, plus two scope violations classified by hand and two double-counted requests removed.</figcaption>
 </figure>
-<p>Behavioral defects are the comparison that matters. Copilot Code Review found the control's single behavioral defect, treatment run-03's single one, and four of treatment run-04's five. The fifth, in run-04 task #4, failed a CI unit test first. That CI step exists only in the treatment.</p>
+<p>Behavioral defects are the comparison that matters. Copilot Code Review found the control's single behavioral defect, treatment run-03's single one, and two of treatment run-04's three. The third, in run-04 task #4, failed a CI unit test first. That CI step exists only in the treatment.</p>
 <p>Two of run-04's formatting failures happened after review: the fix commits for review comments were not formatted.</p>
 </section>
 
@@ -164,16 +164,16 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 <div class="tbl"><table>
 <thead><tr><th>Defect class</th><th>Comparable across arms?</th><th class="n">Control run-01</th><th class="n">Treatment run-03</th><th class="n">Treatment run-04</th></tr></thead>
 <tbody>
-<tr><td>Behavioral (code does the wrong thing)</td><td>Yes</td><td class="n">1</td><td class="n">1</td><td class="n">5</td></tr>
-<tr><td>Formatting (Spotless)</td><td>Yes, both arms run Spotless</td><td class="n">3</td><td class="n">2</td><td class="n">4</td></tr>
+<tr><td>Behavioral (code does the wrong thing)</td><td>Yes</td><td class="n">1</td><td class="n">1</td><td class="n">3</td></tr>
+<tr><td>Formatting (Spotless or review)</td><td>Yes, both arms run Spotless</td><td class="n">3</td><td class="n">2</td><td class="n">6†</td></tr>
 <tr><td>Out-of-scope file changes</td><td>Yes, caught by the same Shepherd gate</td><td class="n">2*</td><td class="n">4</td><td class="n">1*</td></tr>
 <tr><td>Missing requirement or evidence</td><td>Yes, caught by the same Shepherd gate</td><td class="n">0</td><td class="n">1</td><td class="n">1</td></tr>
 <tr><td>Test inventory not updated</td><td>No, treatment-only check</td><td class="n">0</td><td class="n">3</td><td class="n">1</td></tr>
 <tr class="total"><td>Total</td><td></td><td class="n">6</td><td class="n">11</td><td class="n">12</td></tr>
 </tbody></table></div>
-<p class="note">* Includes one scope violation the evaluator left unclassified and I classified by hand from its excerpt (see Method).</p>
+<p class="note">* Includes one scope violation the evaluator left unclassified and I classified by hand from its excerpt (see Method). † Includes two review findings on run-04's issue #3 that its post-mortem describes as unrelated formatting; the evaluator had labeled them behavioral.</p>
 <p>The out-of-scope changes are the same in every run: the agent adds <code>demo/mvnw</code>, <code>demo/mvnw.cmd</code> and the two <code>.mvn/wrapper</code> files. That happens in both arms, so it comes from the project setup, not from the guardrails.</p>
-<p>The two treatment runs differ widely: run-04 had five behavioral defects to run-03's one. With one control run, that spread is larger than any difference between the arms.</p>
+<p>The two treatment runs differ widely: run-04 had three behavioral defects to run-03's one. With one control run, that spread is larger than any difference between the arms.</p>
 </section>
 
 <section id="cost">
@@ -191,10 +191,10 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 <tr><td>Tool calls</td><td class="n">337</td><td class="n">399</td><td class="n">405</td><td class="n">+19%</td></tr>
 <tr><td>Nonzero tool exits</td><td class="n">22</td><td class="n">20</td><td class="n">35</td><td class="n">+25%</td></tr>
 <tr><td>CI runs (distinct head SHAs)</td><td class="n">8</td><td class="n">10</td><td class="n">11</td><td class="n">+31%</td></tr>
-<tr><td>Code review rounds</td><td class="n">3</td><td class="n">6</td><td class="n">2</td><td class="n">+33%</td></tr>
+<tr><td>Code review rounds</td><td class="n">6</td><td class="n">6</td><td class="n">7</td><td class="n">+8%</td></tr>
 <tr><td>Fix commits after review</td><td class="n">1</td><td class="n">1</td><td class="n">5</td><td class="n">+200%</td></tr>
 <tr><td>Stage-30 change requests</td><td class="n">3</td><td class="n">5</td><td class="n">3</td><td class="n">+33%</td></tr>
-<tr><td>Task attempts that failed</td><td class="n">0</td><td class="n">1 (#6)</td><td class="n">0</td><td class="n"></td></tr>
+<tr><td>Task attempts that failed</td><td class="n">0</td><td class="n">1 (#6)</td><td class="n">1 (#5)</td><td class="n"></td></tr>
 </tbody></table></div>
 <p>Elapsed wall-clock time is not comparable. The control sat idle for 10h 49m between stage 30 and stage 40 of task #4 while its Dev Box slept, and both treatment runs were split into two directories with a gap of 1h 05m to 1h 27m.</p>
 <p>The tokens cover local Shepherd sessions only. The remote coding agent and the review agent run on GitHub, and their costs are not in the artifacts.</p>
@@ -207,11 +207,11 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 <thead><tr><th>Symptom (H2)</th><th>What the runs show</th><th>Difference between arms</th></tr></thead>
 <tbody>
 <tr><td>Non-determinism</td><td>Defect totals vary from 6 to 12 per run. The code itself barely varies: PR #7 is +116/−82 lines in two runs and +112/−82 in the third.</td><td>None visible; the two treatment runs differ more than either differs from the control</td></tr>
-<tr><td>Hallucinated APIs and dependencies</td><td>Zero in product code. Tooling misuse occurs in every run (8, 6, 7 events), mostly the same invalid <code>gh</code> flag combinations</td><td>None</td></tr>
+<tr><td>Hallucinated APIs and dependencies</td><td>Zero in product code. Tooling misuse occurs in every run (8, 6, 7 events), mostly the same invalid <code>gh</code> flag combinations, plus one capability hallucination: run-04's shepherd decided a working <code>gh</code> feature was unsupported</td><td>None</td></tr>
 <tr><td>DRY violations</td><td>The same 16-line block in <code>ChangeArrivalDeadlineDateDialog.java</code> (lines 19–34) is copied from <code>ChangeDestinationDialog.java</code> in all three runs</td><td>None: no treatment gate runs a duplicate-code check</td></tr>
 <tr><td>Token cost</td><td>See Cost to converge</td><td>Treatment +25% AIU, +28% input tokens</td></tr>
 <tr><td>Unreviewable code</td><td>Each PR touches 2–4 files and at most 303 added lines</td><td>None visible per PR. The treatment's campaign totals include harness repair commits, so they are not compared</td></tr>
-<tr><td>Failure to converge</td><td>One failed attempt: treatment run-03, task #6, where the coding agent stopped pushing fixes. No review-cap, timeout or idle-kill events</td><td>Too few events to compare</td></tr>
+<tr><td>Failure to converge</td><td>Two failed attempts, both in the treatment: run-03 task #6, where the coding agent stopped pushing fixes, and run-04 task #5, where the shepherd stopped on a false tooling conclusion. No review-cap, timeout or idle-kill events</td><td>Too few events to compare</td></tr>
 <tr><td>Test tampering</td><td>Control: 4 test files changed, 36 assertions added, none removed or disabled</td><td>None in either arm. Treatment PRs added 76 assertions and removed none; agents edited the gate files 4 times, only to register new tests</td></tr>
 <tr><td>Stale and deprecated APIs</td><td>Zero new deprecation or removal warnings in any run (JDK 17, <code>-Xlint:deprecation,removal</code>)</td><td>None</td></tr>
 </tbody></table></div>
@@ -227,7 +227,7 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 <li><strong>The control's idle gap broke its prompt cache.</strong> The control's uncached input was 298,285 tokens; each treatment run had under 1,000. Most likely the cache expired while the control's Dev Box slept for 10h 49m, which inflates the control's cost slightly and makes the treatment's cost increase look smaller.</li>
 <li><strong>The treatment also got a stricter plan and different starting code.</strong> Compared against control-run-01's start (<code>325b7e1</code>), the treatment's plan requires running <code>BookingServiceTest</code> under Open Liberty with all five tests passing; the control's plan only requires the tests to compile. Shepherd's stage-30 gate checks these criteria, so the treatment gate asked for more evidence. The treatment plan also says to keep the Java 7 source level, contradicting its own POM (<code>release 17</code>). Twenty production files also differ at the start, all from four treatment commits: Spotless reformatting, SpotBugs and compiler fixes (serialVersionUID fields, a per-call SimpleDateFormat instead of a shared static one, an unused field and getter removed), an access log for observability, and removal of the GlassFish descriptor. No feature behavior changed. The files include <code>ChangeDestinationDialog.java</code> and <code>BookingBackingBean.java</code>, which the feature touches. Both treatment runs used the identical plan. By design, the stricter plan is part of the guardrail package, so results describe the package as a whole rather than the CI checks alone.</li>
 <li><strong>The evaluator could not classify every event.</strong> It left 7, 10 and 23 events unclassified in the three runs. I reviewed them by hand: two were scope violations, now counted; the rest are check-status polls, skipped jobs, and agent tool or script errors.</li>
-<li><strong>Both treatment runs needed manual harness repairs to finish.</strong> The repairs went onto the base branch between the two directories of each run. They didn't change the guardrails, but they add about 130,000 lines to the treatment's start-to-final diff, so campaign-level diff and test-integrity numbers for the treatment are left out.</li>
+<li><strong>Both treatment runs stopped once and needed manual help to finish.</strong> Run-03's last task merged only after the maintainer ran its acceptance tests by hand and added the evidence to the PR. Run-04 stopped when the shepherd wrongly concluded GitHub CLI couldn't request a Copilot review. Harness repair commits went onto the base branch between the two directories of each run. They didn't change the guardrails, but they add about 130,000 lines to the treatment's start-to-final diff, so campaign-level diff and test-integrity numbers for the treatment are left out.</li>
 </ul>
 </section>
 
@@ -239,7 +239,7 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 <li><strong>The 20 production files are the treatment's own gate fixes.</strong> All changes come from four treatment commits: Spotless reformatting, SpotBugs and compiler fixes, an observability access log, and making Open Liberty the only runtime. Run-04 started from identical production code.</li>
 <li><strong>Control task #5 had no convergence failure.</strong> Every <code>SHEPHERD FAILED</code> line in that transcript is part of a script's text, either the skill's instructions or a command's own failure branch (line 1115). None is command output. The command that contains the matched line printed its normal result, and the session's four nonzero exits (lines 1296, 1643, 1838 and 2535) belong to other commands. The evaluator matched the string inside the command rather than in its output, so the control had zero failed attempts.</li>
 <li><strong>Run-04's unit-test detection counts as a guardrail detection.</strong> In the treatment, unit tests run in CI only in treatment-only steps (<code>Run focused unit tests</code>, <code>Assert unit test count</code>); the control's tests run inside its own <code>Build with Maven</code> step, which the treatment doesn't have.</li>
-<li><strong>Why the runs paused.</strong> The control's 10h 49m gap during task #4 happened because the Dev Box running it went to sleep. The treatment runs stopped on harness failures that were repaired by hand before resuming; that is already disclosed under Caveats.</li>
+<li><strong>Why the runs paused.</strong> The control's 10h 49m gap during task #4 happened because the Dev Box running it went to sleep. Run-03 stopped when the coding agent pushed no remediation; run-04 stopped when the shepherd wrongly concluded GitHub CLI couldn't request a Copilot review. Both were restarted by hand; see Caveats.</li>
 <li><strong>Control task #2 had one stage-30 request, not two; the control total is 6.</strong> Shepherd posted two change requests on PR #7. At 00:58:55 UTC it requested a fix for the Maven Wrapper scope violation plus a wrong test reload path (one request, two items). At 01:05:13 UTC it requested a formatting fix after CI failed. The evaluator's "missing requirement" defect at 01:05:07 is that formatting request, mislabeled and double-counted. Corrected: one formatting defect and one scope violation with two items.</li>
 <li><strong>Run-04 had one missing-requirement defect, not two; its total is 12.</strong> Task #3 had three requests: the Maven Wrapper scope violation, a formatting fix and a test-inventory fix. The evaluator's "missing requirement" at 20:01:48 UTC is the inventory request counted a second time. Task #5's request is genuine: the plan requires the Update action to refresh the Administration view after a successful close, and CCA's first version didn't.</li>
 </ul>
@@ -250,7 +250,7 @@ ul.resolved li::after{content:"";position:absolute;left:.36rem;top:.48em;width:.
 <p>All three runs were scored by <code>shepherd-task-evaluator</code> 0.4.4 at commit <code>f76ebf2</code>, from a clean worktree, on October 4.</p>
 <ul>
 <li><strong>Sources:</strong> each run's <code>findings.json</code>, <code>defects.csv</code>, <code>summary.csv</code> and <code>unclassified.md</code>. Treatment runs use the combined output, which merges the two campaign directories into one record.</li>
-<li><strong>Manual adjudication:</strong> two unclassified stage-30 change requests had headings the evaluator didn't recognize ("Scope violation: four disallowed Maven wrapper files" in the control, "Focused diff gate failure: unrelated Maven Wrapper files" in run-04). I counted both as scope violations. I also removed two evaluator defects that were other requests counted a second time: control #2's "missing requirement" (its formatting request) and run-04 #3's (its test-inventory request). Every other count is the evaluator's own.</li>
+<li><strong>Manual adjudication:</strong> two unclassified stage-30 change requests had headings the evaluator didn't recognize ("Scope violation: four disallowed Maven wrapper files" in the control, "Focused diff gate failure: unrelated Maven Wrapper files" in run-04). I counted both as scope violations. I also removed two evaluator defects that were other requests counted a second time: control #2's "missing requirement" (its formatting request) and run-04 #3's (its test-inventory request). Comparing with the runs' post-mortems led to three more corrections: run-04 issue #3's two review findings are counted as formatting rather than behavioral (based on the post-mortem's description, not yet checked against PR #8's comments), review rounds come from the post-mortems' per-task tables, and run-04's task #5 stop counts as a failed attempt. Every other count is the evaluator's own.</li>
 <li><strong>Tokens:</strong> the last cumulative OTEL export per metric series. Input tokens include cache reads and writes.</li>
 <li><strong>Time to fix:</strong> one treatment defect (run-04, #5) has a fix timestamped 57 seconds before its detection. It is flagged as an anomaly and left out of timing claims.</li>
 <li><strong>Raw transcripts:</strong> I checked treatment run-03 against its raw transcripts in an earlier review. For the control and run-04, I checked the evaluator's outputs plus the transcript passages and git history cited under Resolved checks.</li>
