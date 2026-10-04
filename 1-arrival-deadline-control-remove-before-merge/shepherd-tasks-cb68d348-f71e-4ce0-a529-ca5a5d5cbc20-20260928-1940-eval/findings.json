@@ -2,11 +2,11 @@
   "schemaVersion" : "1.2",
   "evaluator" : {
     "name" : "shepherd-task-evaluator",
-    "version" : "0.4.3",
-    "gitCommit" : "499d2b0d8cb98aa27215ebec6ef41572b6ed1368",
+    "version" : "0.4.4",
+    "gitCommit" : "8a8fc51f44dbb917890c302d5ba6bb7e870b96b9",
     "worktreeDirty" : false,
     "sourceDirectory" : "/Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/dd-3071779-evidence-collection-remove-before-merge/shepherd-task-evaluator",
-    "generatedAt" : "2026-10-02T23:13:06.237989Z",
+    "generatedAt" : "2026-10-02T23:31:55.927168Z",
     "platform" : "Mac OS X-aarch64",
     "invocation" : [ "--evaluator-dir", "/Users/edburns/workareas/dd-3070518-cargotracker-darwin-arm64-01-shepherd-control/dd-3071779-evidence-collection-remove-before-merge/shepherd-task-evaluator", "1-arrival-deadline-control-remove-before-merge/shepherd-tasks-cb68d348-f71e-4ce0-a529-ca5a5d5cbc20-20260928-1940", "--arm", "control", "--repo", ".", "--with-build", "--out", "1-arrival-deadline-control-remove-before-merge/shepherd-tasks-cb68d348-f71e-4ce0-a529-ca5a5d5cbc20-20260928-1940-eval" ],
     "arm" : "control"
@@ -42,8 +42,8 @@
       "exitCode" : 0,
       "activeTimeSeconds" : 9240
     } ],
-    "evaluatorVersion" : "0.4.3",
-    "evaluatorGitCommit" : "499d2b0d8cb98aa27215ebec6ef41572b6ed1368"
+    "evaluatorVersion" : "0.4.4",
+    "evaluatorGitCommit" : "8a8fc51f44dbb917890c302d5ba6bb7e870b96b9"
   },
   "evidenceQuality" : {
     "phaseSessionCount" : 10,
@@ -1466,6 +1466,7 @@
       "summary" : "The task's final PR head contains the accepted remediation.",
       "timestampSource" : "command_output_copilot_work_finished"
     },
+    "gateSource" : "stage30_heading",
     "fixTimestampHint" : "2026-09-29T00:00:05Z",
     "fixTimestampSourceHint" : "command_output_copilot_work_finished",
     "itemCount" : 1
@@ -3603,6 +3604,10 @@
           "status" : "not_present",
           "entryCount" : 0
         },
+        "security" : {
+          "status" : "not_present",
+          "entryCount" : 0
+        },
         "static_analysis" : {
           "status" : "not_present",
           "entryCount" : 0
@@ -3872,6 +3877,10 @@
         "status" : "not_present",
         "entryCount" : 0
       },
+      "security" : {
+        "status" : "not_present",
+        "entryCount" : 0
+      },
       "static_analysis" : {
         "status" : "not_present",
         "entryCount" : 0
@@ -3952,8 +3961,8 @@
         "exitCode" : 0,
         "activeTimeSeconds" : 9240
       } ],
-      "evaluatorVersion" : "0.4.3",
-      "evaluatorGitCommit" : "499d2b0d8cb98aa27215ebec6ef41572b6ed1368"
+      "evaluatorVersion" : "0.4.4",
+      "evaluatorGitCommit" : "8a8fc51f44dbb917890c302d5ba6bb7e870b96b9"
     }
   } ]
 }

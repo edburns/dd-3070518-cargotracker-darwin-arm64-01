@@ -2,9 +2,9 @@
 
 - **Arm:** `control`
 - **Campaign:** `cb68d348-f71e-4ce0-a529-ca5a5d5cbc20`
-- **Evaluator:** `0.4.3` at `499d2b0d8cb98aa27215ebec6ef41572b6ed1368`
+- **Evaluator:** `0.4.4` at `8a8fc51f44dbb917890c302d5ba6bb7e870b96b9`
 - **Evaluator worktree dirty:** false
-- **Generated:** 2026-10-02T23:13:06.284122Z
+- **Generated:** 2026-10-02T23:31:55.977972Z
 
 ## Headline findings
 
@@ -40,7 +40,7 @@
 |---|---|---|
 | maven_project_root_recorded | **pass** | `{"9deec1b5cbdf1666df1323473b3ca0f06ca2cfce":".","4cd369908f089830bbab701632d321f0b122aa43":".","702ee54ca1fa603560d54b86e29b654151869a77":".","db3827c4c49282e36ed3a56970fb2052f0dfe695":".","b58e11722a0ca422d35adec70c9f4bd54041c85f":".","d2d6cb14480ddbf48f38f19bfd4eaf5e292fafbf":".","a56afb39ab5771afd255b8962ea4e10a39af0347":"."}` |
 | cross_repo_start_equivalence | **pass** | `` |
-| ci_and_build_gates_classified | **pass** | `{"formatting":{"status":"not_present","entryCount":0},"build_contract":{"status":"not_present","entryCount":0},"static_analysis":{"status":"not_present","entryCount":0},"compiler":{"status":"not_present","entryCount":0},"unit_tests":{"status":"not_present","entryCount":0},"container_tests":{"status":"not_present","entryCount":0},"ci_other":{"status":"present","entryCount":3}}` |
+| ci_and_build_gates_classified | **pass** | `{"formatting":{"status":"not_present","entryCount":0},"build_contract":{"status":"not_present","entryCount":0},"security":{"status":"not_present","entryCount":0},"static_analysis":{"status":"not_present","entryCount":0},"compiler":{"status":"not_present","entryCount":0},"unit_tests":{"status":"not_present","entryCount":0},"container_tests":{"status":"not_present","entryCount":0},"ci_other":{"status":"present","entryCount":3}}` |
 | product_defect_gate_and_class_non_null | **pass** | `true` |
 | defect_class_subtype_consistent | **pass** | `true` |
 | guardrail_failures_not_unclassified | **pass** | `[]` |
@@ -55,6 +55,7 @@
 |---|---|---:|
 | formatting | not_present | 0 |
 | build_contract | not_present | 0 |
+| security | not_present | 0 |
 | static_analysis | not_present | 0 |
 | compiler | not_present | 0 |
 | unit_tests | not_present | 0 |

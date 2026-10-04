@@ -1,6 +1,6 @@
 # Unclassified Campaign Evidence
 
 - **Arm:** `control`
-- **Evaluator:** `0.4.3` at `499d2b0d8cb98aa27215ebec6ef41572b6ed1368`
+- **Evaluator:** `0.4.4` at `8a8fc51f44dbb917890c302d5ba6bb7e870b96b9`
 
 No events require manual classification.
